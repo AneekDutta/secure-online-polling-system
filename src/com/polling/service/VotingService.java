@@ -1,6 +1,10 @@
 // Package declaration for service layer components
 package com.polling.service;
 
+// Import PollEvent for Observer pattern
+import com.polling.event.PollEvent;
+// Import PollEventType enum
+import com.polling.event.PollEventType;
 // Import duplicate vote exception
 import com.polling.exception.DuplicateVoteException;
 // Import invalid vote exception
@@ -13,10 +17,12 @@ import com.polling.exception.PollNotFoundException;
 import com.polling.exception.ValidationException;
 // Import Poll domain model
 import com.polling.model.Poll;
+// Import VoteReceipt domain model
+import com.polling.model.VoteReceipt;
 // Import Voter domain model
 import com.polling.model.Voter;
 
-// Core service handling business logic, validation rules, and secure ballot submission
+// Core service handling business logic, validation rules, secure ballot submission, and observer dispatch
 public class VotingService {
 
     // Reference to the PollManager providing access to the poll catalog
@@ -29,8 +35,8 @@ public class VotingService {
     // End of constructor
     }
 
-    // Submits a vote while strictly enforcing all validation, duplicate, and status rules
-    public synchronized boolean castVote(String pollId, String rawVoterId, String selectedOption)
+    // Submits a vote and returns an issued cryptographic VoteReceipt while notifying observers
+    public synchronized VoteReceipt castVoteWithReceipt(String pollId, String rawVoterId, String selectedOption)
             throws PollNotFoundException, PollClosedException, DuplicateVoteException, InvalidVoteException, ValidationException {
 
         // Validate voter ID parameter presence
@@ -69,10 +75,10 @@ public class VotingService {
             throw new PollClosedException("Poll #" + pollId + " is CLOSED. Subsequent votes are strictly rejected.");
         // End if
         }
-        // Check for duplicate vote using the poll's internal HashSet
+        // Check for duplicate vote using the poll's cryptographic SHA-256 hash set
         if (poll.hasVoted(voterId)) {
-            // Throw DuplicateVoteException if voter ID already exists in HashSet
-            throw new DuplicateVoteException("Voter ID '" + voterId + "' has already voted in Poll #" + pollId + ".");
+            // Throw DuplicateVoteException if voter ID hash already exists in HashSet
+            throw new DuplicateVoteException("Voter ID '" + voterId + "' has already cast a ballot in Poll #" + pollId + ".");
         // End if
         }
         // Verify that selected option is listed in the poll's authorized options
@@ -81,18 +87,35 @@ public class VotingService {
             throw new InvalidVoteException("Option '" + cleanOption + "' is not a valid choice for this poll.");
         // End if
         }
-        // Construct Voter model instance representing the voter session
-        Voter voter = new Voter(voterId, "Voter-" + voterId);
-        // Atomically record vote in the poll model
-        boolean success = poll.recordVote(voter.getUserId(), cleanOption);
+        // Atomically record vote in the poll model and issue cryptographic receipt
+        VoteReceipt receipt = poll.recordVoteWithReceipt(voterId, cleanOption);
         // If recording failed inside model synchronization
-        if (!success) {
+        if (receipt == null) {
             // Throw duplicate vote exception as secondary defense
             throw new DuplicateVoteException("Vote could not be recorded due to a duplicate submission collision.");
         // End if
         }
-        // Return true indicating successful ballot processing
-        return true;
+        // Dispatch observer event so all open UI panels update in real time
+        this.pollManager.notifyEvent(new PollEvent(PollEventType.VOTE_CAST, pollId, "New vote recorded for \"" + cleanOption + "\" in Poll #" + pollId));
+        // Return issued ballot receipt
+        return receipt;
+    // End of method
+    }
+
+    // Backwards-compatible castVote method returning boolean
+    public synchronized boolean castVote(String pollId, String rawVoterId, String selectedOption)
+            throws PollNotFoundException, PollClosedException, DuplicateVoteException, InvalidVoteException, ValidationException {
+        // Delegate to castVoteWithReceipt and verify non-null
+        return castVoteWithReceipt(pollId, rawVoterId, selectedOption) != null;
+    // End of method
+    }
+
+    // Verifies whether a receipt code is valid for a given poll
+    public VoteReceipt verifyReceipt(String pollId, String receiptCode) throws PollNotFoundException {
+        // Retrieve target poll
+        Poll poll = this.pollManager.getPoll(pollId);
+        // Delegate verification to poll model
+        return poll.verifyReceipt(receiptCode);
     // End of method
     }
 

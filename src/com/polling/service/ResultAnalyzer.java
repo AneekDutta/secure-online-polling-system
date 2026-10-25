@@ -3,6 +3,12 @@ package com.polling.service;
 
 // Import Poll entity model
 import com.polling.model.Poll;
+// Import Plurality strategy as default
+import com.polling.strategy.PluralityWinningStrategy;
+// Import StrategyEvaluationResult
+import com.polling.strategy.StrategyEvaluationResult;
+// Import WinningStrategy interface
+import com.polling.strategy.WinningStrategy;
 // Import ArrayList for mutable list manipulation
 import java.util.ArrayList;
 // Import LinkedHashMap to maintain deterministic option ordering during analysis
@@ -12,17 +18,29 @@ import java.util.List;
 // Import Map interface
 import java.util.Map;
 
-// Component dedicated to computing analytics, percentages, and winners for polls
+// Component dedicated to computing analytics, percentages, and winners using Strategy Pattern
 public class ResultAnalyzer {
 
-    // Analyzes a given poll and compiles a comprehensive result summary
+    // Default plurality winning strategy instance
+    private static final WinningStrategy DEFAULT_STRATEGY = new PluralityWinningStrategy();
+
+    // Analyzes a poll using the default Plurality electoral strategy
     public PollResultSummary analyze(Poll poll) {
+        // Delegate to strategy-aware overload
+        return analyze(poll, DEFAULT_STRATEGY);
+    // End of method
+    }
+
+    // Analyzes a given poll with a specified WinningStrategy (demonstrating Strategy Pattern)
+    public PollResultSummary analyze(Poll poll, WinningStrategy strategy) {
         // Guard against null poll argument
         if (poll == null) {
             // Return empty result summary if poll is null
             return new PollResultSummary("", "None", false, 0, new LinkedHashMap<>(), new LinkedHashMap<>(), new ArrayList<>(), false);
         // End if
         }
+        // Fallback to default strategy if null supplied
+        WinningStrategy activeStrategy = (strategy != null) ? strategy : DEFAULT_STRATEGY;
         // Extract total votes cast across all options
         int totalVotes = poll.getTotalVotes();
         // Fetch raw vote tallies from the poll
@@ -31,8 +49,7 @@ public class ResultAnalyzer {
         Map<String, Integer> orderedCounts = new LinkedHashMap<>();
         // Ordered map to store computed percentages
         Map<String, Double> percentages = new LinkedHashMap<>();
-        // Tracker for the highest vote count observed
-        int highestCount = -1;
+
         // Iterate through all poll options in their original order
         for (String option : poll.getOptions()) {
             // Retrieve vote count for this option, defaulting to 0
@@ -51,32 +68,12 @@ public class ResultAnalyzer {
             }
             // Put computed percentage into ordered map
             percentages.put(option, pct);
-            // Update highest observed vote count
-            if (count > highestCount) {
-                // Set new highest count
-                highestCount = count;
-            // End if
-            }
         // End for
         }
-        // List to hold options with the highest vote count
-        List<String> leaders = new ArrayList<>();
-        // Determine whether there are any votes and who holds the top count
-        if (totalVotes > 0 && highestCount > 0) {
-            // Scan through all options to identify all top vote getters
-            for (Map.Entry<String, Integer> entry : orderedCounts.entrySet()) {
-                // Check if current option matches the highest count
-                if (entry.getValue() == highestCount) {
-                    // Add this option to leader list
-                    leaders.add(entry.getKey());
-                // End if
-                }
-            // End for
-            }
-        // End if
-        }
-        // A tie occurs if more than one option shares the top vote count
-        boolean isTie = (leaders.size() > 1);
+
+        // Delegate electoral winner evaluation to the injected WinningStrategy
+        StrategyEvaluationResult stratResult = activeStrategy.evaluateWinners(orderedCounts, totalVotes);
+
         // Construct and return immutable result summary object
         return new PollResultSummary(
             // Poll ID
@@ -91,10 +88,16 @@ public class ResultAnalyzer {
             orderedCounts,
             // Option percentages map
             percentages,
-            // Leading options list
-            leaders,
+            // Leading options list determined by strategy
+            stratResult.getWinningOptions(),
             // Tie indicator flag
-            isTie
+            stratResult.isTie(),
+            // Runoff requirement flag
+            stratResult.isRequiresRunoff(),
+            // Strategy name
+            activeStrategy.getStrategyName(),
+            // Strategy verdict description
+            stratResult.getDescription()
         );
     // End of method
     }

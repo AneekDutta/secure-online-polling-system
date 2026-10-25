@@ -9,6 +9,8 @@ import com.polling.exception.PollClosedException;
 import com.polling.exception.PollNotFoundException;
 // Import validation exception
 import com.polling.exception.ValidationException;
+// Import VoteReceipt model
+import com.polling.model.VoteReceipt;
 // Import domain models
 import com.polling.model.Poll;
 // Import User model
@@ -362,10 +364,22 @@ public class PollCardPanel extends JPanel {
 
         // Try casting vote through VotingService
         try {
-            // Submit vote to business service layer
-            votingService.castVote(poll.getPollId(), voterId, selectedOption);
-            // Display success feedback message
-            showFeedback("Vote successfully recorded! Thank you for participating.", ModernTheme.COLOR_STATUS_OPEN);
+            // Submit vote to business service layer and receive cryptographic VoteReceipt
+            VoteReceipt receipt = votingService.castVoteWithReceipt(poll.getPollId(), voterId, selectedOption);
+            // Display success feedback message with issued receipt code
+            showFeedback("Vote recorded! Receipt Code: " + receipt.getReceiptCode(), ModernTheme.COLOR_STATUS_OPEN);
+            // Show verification dialog with full cryptographic receipt
+            JOptionPane.showMessageDialog(
+                this,
+                "Your ballot has been securely registered!\n\n" +
+                "Poll Identifier : #" + poll.getPollId() + "\n" +
+                "Option Choice   : " + receipt.getSelectedOption() + "\n" +
+                "Receipt Code    : " + receipt.getReceiptCode() + "\n" +
+                "Voter Hash (Salt): " + receipt.getVoterHash().substring(0, 16) + "...\n\n" +
+                "Keep this receipt code to audit or verify your ballot at any time.",
+                "Ballot Receipt Issued",
+                JOptionPane.INFORMATION_MESSAGE
+            );
             // Clear input field
             voterIdField.setText("");
             // Clear radio button selection

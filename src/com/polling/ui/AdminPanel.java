@@ -1,18 +1,28 @@
 // Package declaration for user interface components
 package com.polling.ui;
 
-// Import exceptions
-import com.polling.exception.ValidationException;
+// Import PollEvent for Observer Pattern
+import com.polling.event.PollEvent;
+// Import PollEventListener interface
+import com.polling.event.PollEventListener;
 // Import domain models
 import com.polling.model.Admin;
 // Import Poll
 import com.polling.model.Poll;
 // Import User
 import com.polling.model.User;
+// Import VoteReceipt
+import com.polling.model.VoteReceipt;
 // Import Voter
 import com.polling.model.Voter;
 // Import PollManager service
 import com.polling.service.PollManager;
+// Import PollResultSummary
+import com.polling.service.PollResultSummary;
+// Import ReportExporter service
+import com.polling.service.ReportExporter;
+// Import ResultAnalyzer service
+import com.polling.service.ResultAnalyzer;
 // Import AWT layout components
 import java.awt.BorderLayout;
 // Import Color
@@ -27,6 +37,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 // Import Insets
 import java.awt.Insets;
+// Import File
+import java.io.File;
 // Import List
 import java.util.List;
 // Import Set
@@ -39,6 +51,8 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 // Import JButton
 import javax.swing.JButton;
+// Import JFileChooser
+import javax.swing.JFileChooser;
 // Import JLabel
 import javax.swing.JLabel;
 // Import JOptionPane
@@ -49,11 +63,11 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 // Import JTable
 import javax.swing.JTable;
-// Import table model
-import javax.swing.table.DefaultTableModel;
+// Import SwingUtilities
+import javax.swing.SwingUtilities;
 
-// Visual panel providing administrative controls, user role switching (OOP Polymorphism), and audit logs
-public class AdminPanel extends JPanel {
+// Visual panel providing administrative controls, role switching (OOP Polymorphism), Observer auto-updates, and audit receipts
+public class AdminPanel extends JPanel implements PollEventListener {
 
     // Serial version UID
     private static final long serialVersionUID = 1L;
@@ -69,6 +83,9 @@ public class AdminPanel extends JPanel {
 
     // Refresh callback
     private final Runnable globalRefreshCallback;
+
+    // Result analyzer for generating audit reports
+    private final ResultAnalyzer resultAnalyzer;
 
     // Container holding admin poll table/cards
     private final JPanel adminContentPanel;
@@ -94,6 +111,8 @@ public class AdminPanel extends JPanel {
         this.userUpdateConsumer = userUpdateConsumer;
         // Assign global refresh callback
         this.globalRefreshCallback = globalRefreshCallback;
+        // Initialize result analyzer
+        this.resultAnalyzer = new ResultAnalyzer();
 
         // Set layout to BorderLayout
         setLayout(new BorderLayout(0, 16));
@@ -136,6 +155,14 @@ public class AdminPanel extends JPanel {
     // End of constructor
     }
 
+    // Observer callback automatically re-rendering admin controls when poll events fire
+    @Override
+    public void onPollEvent(PollEvent event) {
+        // Dispatch UI update onto the Swing Event Dispatch Thread
+        SwingUtilities.invokeLater(this::refreshAdminView);
+    // End of method
+    }
+
     // Creates the top section with persona switcher demonstrating OOP Polymorphism
     private JPanel createTopSection() {
         // Container panel
@@ -146,7 +173,7 @@ public class AdminPanel extends JPanel {
         topContainer.setOpaque(false);
 
         // Header title
-        JLabel titleLabel = new JLabel("Administration & Security Console");
+        JLabel titleLabel = new JLabel("Administration & Security Console (Iteration 2)");
         // Heading font
         titleLabel.setFont(ModernTheme.FONT_HEADING);
         // Navy color
@@ -157,7 +184,7 @@ public class AdminPanel extends JPanel {
         topContainer.add(titleLabel);
 
         // Subtitle
-        JLabel subLabel = new JLabel("Manage poll availability, audit voter hash sets, and switch user roles to test OOP Polymorphism.");
+        JLabel subLabel = new JLabel("Manage poll lifecycle, verify ballot receipts, audit SHA-256 voter hashes, and test OOP polymorphism.");
         // Body font
         subLabel.setFont(ModernTheme.FONT_BODY);
         // Muted color
@@ -308,7 +335,7 @@ public class AdminPanel extends JPanel {
             detailsPanel.add(Box.createRigidArea(new Dimension(0, 4)));
 
             // Metrics label
-            JLabel metricsLabel = new JLabel("Status: " + (poll.isOpen() ? "OPEN" : "CLOSED") + "  |  Total Votes: " + poll.getTotalVotes() + "  |  Unique Voter IDs: " + poll.getVoterCount());
+            JLabel metricsLabel = new JLabel("Status: " + (poll.isOpen() ? "OPEN" : "CLOSED") + "  |  Total Votes: " + poll.getTotalVotes() + "  |  SHA-256 Voter Hashes: " + poll.getVoterCount());
             // Font
             metricsLabel.setFont(ModernTheme.FONT_BODY);
             // Color
@@ -378,14 +405,32 @@ public class AdminPanel extends JPanel {
             // Add toggle button
             actionPanel.add(toggleBtn);
 
-            // Audit Voter IDs button
-            JButton auditBtn = new JButton("Audit Voter IDs (HashSet)");
+            // Verify Receipt button
+            JButton verifyReceiptBtn = new JButton("Verify Receipt");
+            // Style secondary
+            ModernTheme.styleSecondaryButton(verifyReceiptBtn);
+            // Click listener
+            verifyReceiptBtn.addActionListener(e -> handleVerifyReceipt(poll));
+            // Add to panel
+            actionPanel.add(verifyReceiptBtn);
+
+            // Audit Voter Hashes button
+            JButton auditBtn = new JButton("Audit Hashes (HashSet)");
             // Style secondary
             ModernTheme.styleSecondaryButton(auditBtn);
             // Click listener
             auditBtn.addActionListener(e -> showAuditDialog(poll));
             // Add audit button
             actionPanel.add(auditBtn);
+
+            // Export Audit Report button
+            JButton exportBtn = new JButton("Export Report");
+            // Style secondary
+            ModernTheme.styleSecondaryButton(exportBtn);
+            // Click listener
+            exportBtn.addActionListener(e -> handleExportPollReport(poll));
+            // Add export button
+            actionPanel.add(exportBtn);
 
             // Add action panel to east
             card.add(actionPanel, BorderLayout.EAST);
@@ -404,36 +449,103 @@ public class AdminPanel extends JPanel {
     // End of method
     }
 
-    // Displays a modal showing the exact voter IDs recorded in the poll's HashSet
+    // Prompts admin to input a receipt code and checks cryptographic validity against the poll model
+    private void handleVerifyReceipt(Poll poll) {
+        // Prompt dialog
+        String code = JOptionPane.showInputDialog(this, "Enter Voter Receipt Code to verify (e.g. RCPT-...):", "Verify Ballot Receipt", JOptionPane.QUESTION_MESSAGE);
+        // If code supplied
+        if (code != null && !code.trim().isEmpty()) {
+            // Lookup receipt in poll
+            VoteReceipt receipt = poll.verifyReceipt(code.trim());
+            // If receipt found
+            if (receipt != null) {
+                // Display verification success
+                JOptionPane.showMessageDialog(
+                    this,
+                    "RECEIPT VERIFIED LEGITIMATE:\n\n" +
+                    "Receipt Code  : " + receipt.getReceiptCode() + "\n" +
+                    "Poll ID       : #" + receipt.getPollId() + "\n" +
+                    "Option Voted  : " + receipt.getSelectedOption() + "\n" +
+                    "Voter Hash    : " + receipt.getVoterHash() + "\n" +
+                    "Cast Timestamp: " + receipt.getIssuedAt() + "\n\n" +
+                    "Status: This ballot is officially tallied in memory.",
+                    "Receipt Verification Result",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+            // If receipt not found
+            } else {
+                // Display not found error
+                JOptionPane.showMessageDialog(this, "No ballot with Receipt Code '" + code.trim() + "' was found for Poll #" + poll.getPollId() + ".", "Invalid Receipt Code", JOptionPane.ERROR_MESSAGE);
+            // End if
+            }
+        // End if
+        }
+    // End of method
+    }
+
+    // Handles exporting a certified report for a specific poll
+    private void handleExportPollReport(Poll poll) {
+        // Create file chooser
+        JFileChooser chooser = new JFileChooser();
+        // Set default name
+        chooser.setSelectedFile(new File("poll-" + poll.getPollId().toLowerCase() + "-audit.txt"));
+        // Show dialog
+        int res = chooser.showSaveDialog(this);
+        // If chosen
+        if (res == JFileChooser.APPROVE_OPTION) {
+            // File
+            File target = chooser.getSelectedFile();
+            // Try export
+            try {
+                // Compute summary
+                PollResultSummary summary = resultAnalyzer.analyze(poll);
+                // Export certified audit
+                ReportExporter.exportCertifiedAuditReport(poll, summary, target);
+                // Success message
+                JOptionPane.showMessageDialog(this, "Audit report exported to:\n" + target.getAbsolutePath(), "Export Complete", JOptionPane.INFORMATION_MESSAGE);
+            // Catch error
+            } catch (Exception ex) {
+                // Error dialog
+                JOptionPane.showMessageDialog(this, "Export failed: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            // End try-catch
+            }
+        // End if
+        }
+    // End of method
+    }
+
+    // Displays a modal showing the exact salted SHA-256 voter hashes recorded in the poll's HashSet
     private void showAuditDialog(Poll poll) {
-        // Retrieve voter IDs set
-        Set<String> voterIds = poll.getVotedVoterIds();
+        // Retrieve voter hashes set
+        Set<String> voterHashes = poll.getVotedVoterHashes();
         // Prepare message string builder
         StringBuilder sb = new StringBuilder();
         // Append header
-        sb.append("Audit Report for Poll ").append(poll.getPollId()).append(":\n");
+        sb.append("Cryptographic Audit Trail for Poll #").append(poll.getPollId()).append(":\n");
+        // Append notice
+        sb.append("Note: Plain-text IDs are hashed with salt using SHA-256 to ensure voter anonymity.\n");
         // Append total count
-        sb.append("Total Unique Voters recorded in HashSet: ").append(voterIds.size()).append("\n\n");
+        sb.append("Total Unique Hashes in HashSet: ").append(voterHashes.size()).append("\n\n");
         // Check if empty
-        if (voterIds.isEmpty()) {
+        if (voterHashes.isEmpty()) {
             // Append empty message
             sb.append("No votes have been recorded in this poll yet.");
-        // If IDs exist
+        // If hashes exist
         } else {
             // Append header
-            sb.append("Recorded Voter IDs:\n");
+            sb.append("Salted SHA-256 Voter Hashes in HashSet:\n");
             // Counter
             int count = 1;
-            // Iterate over IDs
-            for (String vid : voterIds) {
-                // Append numbered ID
-                sb.append("  ").append(count++).append(". ").append(vid).append("\n");
+            // Iterate over hashes
+            for (String vHash : voterHashes) {
+                // Append numbered truncated hash for clean dialog display
+                sb.append("  ").append(count++).append(". ").append(vHash).append("\n");
             // End for
             }
         // End if
         }
         // Show message dialog
-        JOptionPane.showMessageDialog(this, sb.toString(), "HashSet Voter Audit - " + poll.getPollId(), JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, sb.toString(), "HashSet Cryptographic Audit - " + poll.getPollId(), JOptionPane.INFORMATION_MESSAGE);
     // End of method
     }
 // End of class

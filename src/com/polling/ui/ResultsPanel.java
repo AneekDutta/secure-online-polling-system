@@ -1,6 +1,12 @@
 // Package declaration for user interface components
 package com.polling.ui;
 
+// Import PollEvent for Observer Pattern
+import com.polling.event.PollEvent;
+// Import PollEventListener interface
+import com.polling.event.PollEventListener;
+// Import PollEventType enum
+import com.polling.event.PollEventType;
 // Import exceptions
 import com.polling.exception.PollNotFoundException;
 // Import Poll domain model
@@ -9,8 +15,16 @@ import com.polling.model.Poll;
 import com.polling.service.PollManager;
 // Import PollResultSummary DTO
 import com.polling.service.PollResultSummary;
+// Import ReportExporter service
+import com.polling.service.ReportExporter;
 // Import ResultAnalyzer service
 import com.polling.service.ResultAnalyzer;
+// Import Majority strategy
+import com.polling.strategy.MajorityWinningStrategy;
+// Import Plurality strategy
+import com.polling.strategy.PluralityWinningStrategy;
+// Import WinningStrategy interface
+import com.polling.strategy.WinningStrategy;
 // Import AWT layout components
 import java.awt.BorderLayout;
 // Import Color
@@ -31,6 +45,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 // Import RenderingHints
 import java.awt.RenderingHints;
+// Import File
+import java.io.File;
 // Import List
 import java.util.List;
 // Import Map
@@ -49,15 +65,21 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 // Import JComponent
 import javax.swing.JComponent;
+// Import JFileChooser
+import javax.swing.JFileChooser;
 // Import JLabel
 import javax.swing.JLabel;
+// Import JOptionPane
+import javax.swing.JOptionPane;
 // Import JPanel
 import javax.swing.JPanel;
 // Import JScrollPane
 import javax.swing.JScrollPane;
+// Import SwingUtilities
+import javax.swing.SwingUtilities;
 
-// Visual panel delivering analytical vote breakdowns, percentages, horizontal progress bars, and tie detection
-public class ResultsPanel extends JPanel {
+// Visual panel delivering vote breakdowns, Strategy Pattern electoral models, auto-updating Observer, and CSV/Text exports
+public class ResultsPanel extends JPanel implements PollEventListener {
 
     // Serial version UID
     private static final long serialVersionUID = 1L;
@@ -71,8 +93,17 @@ public class ResultsPanel extends JPanel {
     // Combo box for selecting poll to view
     private final JComboBox<PollItem> pollSelector;
 
+    // Combo box for selecting electoral winning strategy (Strategy Pattern)
+    private final JComboBox<StrategyItem> strategySelector;
+
     // Content container for rendering analytical charts and metrics
     private final JPanel resultsContentPanel;
+
+    // Cached current summary for export operations
+    private PollResultSummary currentSummary;
+
+    // Cached current poll for export operations
+    private Poll currentPoll;
 
     // Helper item class for rendering poll titles in JComboBox
     private static class PollItem {
@@ -95,6 +126,28 @@ public class ResultsPanel extends JPanel {
         public String toString() {
             // Return label
             return this.label;
+        // End method
+        }
+    // End class
+    }
+
+    // Helper item class for rendering Strategy choices in JComboBox
+    private static class StrategyItem {
+        // Strategy instance
+        final WinningStrategy strategy;
+
+        // Constructor
+        StrategyItem(WinningStrategy strategy) {
+            // Assign strategy
+            this.strategy = strategy;
+        // End constructor
+        }
+
+        // Display string in combobox
+        @Override
+        public String toString() {
+            // Return strategy name
+            return this.strategy.getStrategyName();
         // End method
         }
     // End class
@@ -170,6 +223,13 @@ public class ResultsPanel extends JPanel {
         this.resultAnalyzer = resultAnalyzer;
         // Initialize poll selector combo box
         this.pollSelector = new JComboBox<>();
+        // Initialize strategy selector combo box
+        this.strategySelector = new JComboBox<>();
+
+        // Add Plurality strategy option
+        strategySelector.addItem(new StrategyItem(new PluralityWinningStrategy()));
+        // Add Majority threshold strategy option
+        strategySelector.addItem(new StrategyItem(new MajorityWinningStrategy()));
 
         // Set layout to BorderLayout
         setLayout(new BorderLayout(0, 16));
@@ -207,7 +267,7 @@ public class ResultsPanel extends JPanel {
     // End of constructor
     }
 
-    // Creates the top selection header containing dropdown and refresh button
+    // Creates the top selection header containing poll selector, strategy selector, and export actions
     private JPanel createSelectionHeader() {
         // Header container panel
         JPanel header = new JPanel(new BorderLayout(16, 8));
@@ -222,7 +282,7 @@ public class ResultsPanel extends JPanel {
         titlePanel.setOpaque(false);
 
         // Heading
-        JLabel titleLabel = new JLabel("Poll Results & Analytics");
+        JLabel titleLabel = new JLabel("Poll Results & Analytics (Iteration 2)");
         // Heading font
         titleLabel.setFont(ModernTheme.FONT_HEADING);
         // Primary color
@@ -231,7 +291,7 @@ public class ResultsPanel extends JPanel {
         titlePanel.add(titleLabel);
 
         // Subtitle
-        JLabel subLabel = new JLabel("Live vote counts, calculated percentage distributions, and winner detection.");
+        JLabel subLabel = new JLabel("Real-time Observer updates, selectable electoral strategies, and certified report exports.");
         // Body font
         subLabel.setFont(ModernTheme.FONT_BODY);
         // Muted color
@@ -244,13 +304,13 @@ public class ResultsPanel extends JPanel {
         // Add title panel
         header.add(titlePanel, BorderLayout.WEST);
 
-        // Controls panel
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        // Controls container panel
+        JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         // Transparent
         controls.setOpaque(false);
 
         // Label for selector
-        JLabel selectLabel = new JLabel("Select Poll:");
+        JLabel selectLabel = new JLabel("Poll:");
         // Bold font
         selectLabel.setFont(ModernTheme.FONT_BODY_BOLD);
         // Text color
@@ -263,32 +323,147 @@ public class ResultsPanel extends JPanel {
         // Background color
         pollSelector.setBackground(Color.WHITE);
         // Preferred width
-        pollSelector.setPreferredSize(new Dimension(280, 36));
+        pollSelector.setPreferredSize(new Dimension(220, 34));
         // Selection change listener
         pollSelector.addActionListener(e -> renderSelectedPollResults());
         // Add selector
         controls.add(pollSelector);
 
-        // Refresh button
-        JButton refreshBtn = new JButton("Refresh");
+        // Strategy label
+        JLabel stratLabel = new JLabel("Strategy:");
+        // Bold font
+        stratLabel.setFont(ModernTheme.FONT_BODY_BOLD);
+        // Text color
+        stratLabel.setForeground(ModernTheme.COLOR_TEXT_SECONDARY);
+        // Add label
+        controls.add(stratLabel);
+
+        // Style strategy selector
+        strategySelector.setFont(ModernTheme.FONT_BODY);
+        // Background color
+        strategySelector.setBackground(Color.WHITE);
+        // Preferred width
+        strategySelector.setPreferredSize(new Dimension(200, 34));
+        // Selection change listener to re-evaluate winners
+        strategySelector.addActionListener(e -> renderSelectedPollResults());
+        // Add strategy selector
+        controls.add(strategySelector);
+
+        // Export CSV button
+        JButton exportCsvBtn = new JButton("Export CSV");
         // Style secondary
-        ModernTheme.styleSecondaryButton(refreshBtn);
-        // Action listener
-        refreshBtn.addActionListener(e -> {
-            // Keep selected item ID
-            PollItem item = (PollItem) pollSelector.getSelectedItem();
-            // Reload list
-            reloadPollList(item != null ? item.id : null);
-        // End listener
-        });
-        // Add refresh button
-        controls.add(refreshBtn);
+        ModernTheme.styleSecondaryButton(exportCsvBtn);
+        // Click listener
+        exportCsvBtn.addActionListener(e -> handleExportCsv());
+        // Add button
+        controls.add(exportCsvBtn);
+
+        // Export Text Audit button
+        JButton exportTxtBtn = new JButton("Export Audit (.txt)");
+        // Style secondary
+        ModernTheme.styleSecondaryButton(exportTxtBtn);
+        // Click listener
+        exportTxtBtn.addActionListener(e -> handleExportAuditText());
+        // Add button
+        controls.add(exportTxtBtn);
 
         // Add controls to header
         header.add(controls, BorderLayout.EAST);
 
         // Return header
         return header;
+    // End of method
+    }
+
+    // Handles user CSV export via JFileChooser
+    private void handleExportCsv() {
+        // Validate current summary
+        if (currentSummary == null) {
+            // Show warning
+            JOptionPane.showMessageDialog(this, "No poll results available to export.", "Export Notice", JOptionPane.WARNING_MESSAGE);
+            // Return
+            return;
+        // End if
+        }
+        // Create file chooser
+        JFileChooser chooser = new JFileChooser();
+        // Set suggested file name
+        chooser.setSelectedFile(new File("poll-" + currentSummary.getPollId().toLowerCase() + "-results.csv"));
+        // Show save dialog
+        int result = chooser.showSaveDialog(this);
+        // If approved
+        if (result == JFileChooser.APPROVE_OPTION) {
+            // Target file
+            File target = chooser.getSelectedFile();
+            // Try export
+            try {
+                // Execute export
+                ReportExporter.exportToCSV(currentSummary, target);
+                // Success message
+                JOptionPane.showMessageDialog(this, "CSV file exported successfully to:\n" + target.getAbsolutePath(), "Export Complete", JOptionPane.INFORMATION_MESSAGE);
+            // Catch IO error
+            } catch (Exception ex) {
+                // Error dialog
+                JOptionPane.showMessageDialog(this, "Failed to export CSV: " + ex.getMessage(), "Export Error", JOptionPane.ERROR_MESSAGE);
+            // End try-catch
+            }
+        // End if
+        }
+    // End of method
+    }
+
+    // Handles certified audit report text export via JFileChooser
+    private void handleExportAuditText() {
+        // Validate current poll and summary
+        if (currentPoll == null || currentSummary == null) {
+            // Show warning
+            JOptionPane.showMessageDialog(this, "No poll results available to export.", "Export Notice", JOptionPane.WARNING_MESSAGE);
+            // Return
+            return;
+        // End if
+        }
+        // Create file chooser
+        JFileChooser chooser = new JFileChooser();
+        // Set suggested file name
+        chooser.setSelectedFile(new File("poll-" + currentSummary.getPollId().toLowerCase() + "-audit-report.txt"));
+        // Show save dialog
+        int result = chooser.showSaveDialog(this);
+        // If approved
+        if (result == JFileChooser.APPROVE_OPTION) {
+            // Target file
+            File target = chooser.getSelectedFile();
+            // Try export
+            try {
+                // Execute export
+                ReportExporter.exportCertifiedAuditReport(currentPoll, currentSummary, target);
+                // Success message
+                JOptionPane.showMessageDialog(this, "Certified audit report exported successfully to:\n" + target.getAbsolutePath(), "Export Complete", JOptionPane.INFORMATION_MESSAGE);
+            // Catch IO error
+            } catch (Exception ex) {
+                // Error dialog
+                JOptionPane.showMessageDialog(this, "Failed to export report: " + ex.getMessage(), "Export Error", JOptionPane.ERROR_MESSAGE);
+            // End try-catch
+            }
+        // End if
+        }
+    // End of method
+    }
+
+    // Observer callback automatically re-rendering results in real time when poll events fire
+    @Override
+    public void onPollEvent(PollEvent event) {
+        // Run update on Swing Event Dispatch Thread
+        SwingUtilities.invokeLater(() -> {
+            // Extract selected item
+            PollItem item = (PollItem) pollSelector.getSelectedItem();
+            // If poll created or event matches current poll
+            if (event.getEventType() == PollEventType.POLL_CREATED || (item != null && item.id.equalsIgnoreCase(event.getPollId()))) {
+                // Reload poll dropdown while preserving selection
+                reloadPollList(item != null ? item.id : null);
+            // End if
+            }
+        // End runnable
+        });
     // End of method
     }
 
@@ -342,7 +517,7 @@ public class ResultsPanel extends JPanel {
     // End of method
     }
 
-    // Computes and renders analytics for the currently selected poll
+    // Computes and renders analytics for the currently selected poll using active strategy
     private void renderSelectedPollResults() {
         // Clear existing UI elements
         resultsContentPanel.removeAll();
@@ -351,6 +526,10 @@ public class ResultsPanel extends JPanel {
         PollItem selectedItem = (PollItem) pollSelector.getSelectedItem();
         // If nothing is selected
         if (selectedItem == null) {
+            // Nullify caches
+            currentPoll = null;
+            // Nullify summary
+            currentSummary = null;
             // Empty state
             renderEmptyState("No poll selected. Please select a poll from the dropdown above.");
             // Revalidate
@@ -368,8 +547,14 @@ public class ResultsPanel extends JPanel {
         try {
             // Get poll by ID
             poll = pollManager.getPoll(selectedItem.id);
+            // Cache current poll
+            this.currentPoll = poll;
         // Catch exception
         } catch (PollNotFoundException ex) {
+            // Nullify caches
+            currentPoll = null;
+            // Nullify summary
+            currentSummary = null;
             // Render error state
             renderEmptyState("Error: Poll not found in storage.");
             // Revalidate
@@ -381,8 +566,15 @@ public class ResultsPanel extends JPanel {
         // End try-catch
         }
 
-        // Compute analytics via ResultAnalyzer
-        PollResultSummary summary = resultAnalyzer.analyze(poll);
+        // Retrieve selected strategy
+        StrategyItem stratItem = (StrategyItem) strategySelector.getSelectedItem();
+        // Extract strategy
+        WinningStrategy strategy = (stratItem != null) ? stratItem.strategy : new PluralityWinningStrategy();
+
+        // Compute analytics via ResultAnalyzer with strategy
+        PollResultSummary summary = resultAnalyzer.analyze(poll, strategy);
+        // Cache current summary
+        this.currentSummary = summary;
 
         // 1. Overview Card (Question, Status, Total Votes, Winner Banner)
         JPanel overviewCard = new JPanel();
@@ -401,7 +593,7 @@ public class ResultsPanel extends JPanel {
         metaRow.setOpaque(false);
 
         // Poll ID and vote count label
-        JLabel idLabel = new JLabel("Poll #" + summary.getPollId() + "  •  Total Votes: " + summary.getTotalVotes() + "  •  Unique Voters: " + poll.getVoterCount());
+        JLabel idLabel = new JLabel("Poll #" + summary.getPollId() + "  •  Total Votes: " + summary.getTotalVotes() + "  •  Unique Voters (SHA-256): " + poll.getVoterCount());
         // Font
         idLabel.setFont(ModernTheme.FONT_BODY_BOLD);
         // Color
@@ -450,7 +642,7 @@ public class ResultsPanel extends JPanel {
         // Bold font
         bannerLabel.setFont(ModernTheme.FONT_BODY_BOLD);
 
-        // Configure banner style based on results
+        // Configure banner style based on strategy results
         if (!summary.hasVotes()) {
             // Neutral grey banner for 0 votes
             bannerPanel.setBackground(ModernTheme.COLOR_BG_INPUT);
@@ -458,12 +650,20 @@ public class ResultsPanel extends JPanel {
             bannerLabel.setText("No votes recorded yet. This poll is awaiting voter participation.");
             // Text color
             bannerLabel.setForeground(ModernTheme.COLOR_TEXT_MUTED);
+        // Check if strategy mandates a runoff
+        } else if (summary.isRequiresRunoff()) {
+            // Amber banner for runoff requirement
+            bannerPanel.setBackground(new Color(254, 243, 199));
+            // Label text from summary
+            bannerLabel.setText("Verdict: " + summary.getWinnerDescription());
+            // Amber text
+            bannerLabel.setForeground(ModernTheme.COLOR_STATUS_TIE);
         // If tie exists
         } else if (summary.isTie()) {
             // Amber banner for tie
             bannerPanel.setBackground(new Color(254, 243, 199));
             // Label text
-            bannerLabel.setText("Result: TIE between options: " + String.join(" and ", summary.getWinningOptions()));
+            bannerLabel.setText("Verdict: " + summary.getWinnerDescription());
             // Amber text
             bannerLabel.setForeground(ModernTheme.COLOR_STATUS_TIE);
         // If single leader exists
@@ -471,7 +671,7 @@ public class ResultsPanel extends JPanel {
             // Light blue banner for winner
             bannerPanel.setBackground(ModernTheme.COLOR_ACCENT_LIGHT);
             // Label text
-            bannerLabel.setText("Leading Option: " + summary.getWinningOptions().get(0) + " (" + summary.getOptionPercentages().get(summary.getWinningOptions().get(0)) + "%)");
+            bannerLabel.setText("Verdict: " + summary.getWinnerDescription());
             // Accent blue text
             bannerLabel.setForeground(ModernTheme.COLOR_ACCENT_BLUE);
         // End if
@@ -498,8 +698,8 @@ public class ResultsPanel extends JPanel {
         // Align left
         breakdownCard.setAlignmentX(LEFT_ALIGNMENT);
 
-        // Breakdown section title
-        JLabel breakdownTitle = new JLabel("Option Vote Distribution");
+        // Breakdown section title with active strategy notice
+        JLabel breakdownTitle = new JLabel("Option Vote Distribution — Evaluated under: " + strategy.getStrategyName());
         // Font
         breakdownTitle.setFont(ModernTheme.FONT_SUBHEADING);
         // Color
@@ -523,7 +723,7 @@ public class ResultsPanel extends JPanel {
             // Percentage for option
             double pct = percentages.getOrDefault(optionText, 0.0);
             // Is this option currently among winners
-            boolean isWinner = summary.hasVotes() && summary.getWinningOptions().contains(optionText);
+            boolean isWinner = summary.hasVotes() && summary.getWinningOptions().contains(optionText) && !summary.isRequiresRunoff();
 
             // Container row for this option
             JPanel optionRow = new JPanel();

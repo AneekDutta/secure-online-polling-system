@@ -1,6 +1,10 @@
 // Package declaration for user interface components
 package com.polling.ui;
 
+// Import PollEvent for Observer Pattern
+import com.polling.event.PollEvent;
+// Import PollEventListener interface
+import com.polling.event.PollEventListener;
 // Import Poll model
 import com.polling.model.Poll;
 // Import User model
@@ -47,9 +51,11 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 // Import JTextField
 import javax.swing.JTextField;
+// Import SwingUtilities for thread-safe UI updates
+import javax.swing.SwingUtilities;
 
-// Panel that renders the list of available polls with search and filter capabilities
-public class PollListPanel extends JPanel {
+// Panel that renders the list of available polls with search and filter capabilities (implements Observer)
+public class PollListPanel extends JPanel implements PollEventListener {
 
     // Serial version UID
     private static final long serialVersionUID = 1L;
@@ -361,6 +367,14 @@ public class PollListPanel extends JPanel {
         cardsContainer.revalidate();
         // Repaint container
         cardsContainer.repaint();
+    // End of method
+    }
+
+    // Observer callback automatically refreshing poll cards in real time upon lifecycle events
+    @Override
+    public void onPollEvent(PollEvent event) {
+        // Dispatch UI update onto the Swing Event Dispatch Thread
+        SwingUtilities.invokeLater(this::refreshPolls);
     // End of method
     }
 // End of class

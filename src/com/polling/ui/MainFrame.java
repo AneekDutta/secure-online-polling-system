@@ -177,6 +177,13 @@ public class MainFrame extends JFrame {
             this::refreshAllViews
         );
 
+        // Register observers with PollManager for automatic event-driven updates (Observer Pattern)
+        this.pollManager.addEventListener(this.pollListPanel);
+        // Register results panel observer
+        this.pollManager.addEventListener(this.resultsPanel);
+        // Register admin panel observer
+        this.pollManager.addEventListener(this.adminPanel);
+
         // Add pages to card layout panel
         pagesPanel.add(pollListPanel, "POLLS");
         // Add create page
