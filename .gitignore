@@ -1,0 +1,14 @@
+# Build output and bytecode
+bin/
+*.class
+
+# macOS system files
+.DS_Store
+
+# IDE and Editor settings
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
