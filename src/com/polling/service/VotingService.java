@@ -1,4 +1,3 @@
-// Package declaration for service layer components
 package com.polling.service;
 
 // Import duplicate vote exception
