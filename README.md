@@ -11,7 +11,7 @@ The **Secure Online Polling & Result Analysis System** is a lightweight, respons
 In **Iteration 2**, the system incorporates advanced software engineering design patterns (**Observer Pattern** and **Strategy Pattern**), cryptographic ballot protection (**Salted SHA-256 Voter Hashing** and **Ballot Receipts**), and certified **CSV and Text Report Exporting**.
 
 > [!NOTE]
-> **In-Memory Storage Notice**: This application operates in-memory using standard Java collections (`HashMap` and `HashSet`). All polls, votes, and timestamps reset when the application restarts. This design avoids external database/network dependencies while keeping data structures clean, transparent, and easy to explain during academic evaluation.
+> **Hybrid In-Memory + Supabase Cloud Architecture**: This application operates in a robust hybrid model. It utilizes high-speed in-memory collections (`HashMap` and `HashSet`) for instantaneous UI operations and local resilience, while asynchronously synchronizing state with a live **Supabase PostgreSQL** cloud database (`https://ykxcoihvfzgykrkabbdy.supabase.co`). If internet access is unavailable, the application gracefully continues operating in local in-memory mode without interruption.
 
 ---
 
@@ -29,6 +29,7 @@ In **Iteration 2**, the system incorporates advanced software engineering design
 8. **Receipt Verification & Audit**: Administrators can enter any receipt code to verify its legitimacy or inspect the raw SHA-256 voter hash set.
 9. **Polymorphic Persona Switcher**: Seamlessly toggle between "Administrator" and "Standard Voter" sessions in the UI to demonstrate runtime polymorphism and access control.
 10. **Pre-Seeded Sample Polls**: The application comes pre-loaded with realistic college polls (including a 50/50 tie demonstration) for immediate evaluation without setup delay.
+11. **Supabase Cloud PostgreSQL Integration**: Seamlessly syncs polls, candidate options, voter hashes, ballot receipts, and audit trail events with a live Supabase PostgreSQL database (`https://ykxcoihvfzgykrkabbdy.supabase.co`) via zero-dependency asynchronous standard Java HTTP client.
 
 ---
 
@@ -64,6 +65,9 @@ oop-gauri&aneek/
 │           │   └── VoteReceipt.java               # Cryptographic ballot receipt model
 │           ├── security/
 │           │   └── SecurityUtil.java              # SHA-256 salted voter hashing & receipt generator
+│           ├── database/
+│           │   ├── SupabaseConfig.java            # Supabase PostgreSQL REST credentials & endpoints
+│           │   └── SupabaseClient.java            # Asynchronous pure-Java HTTP cloud persistence client
 │           ├── event/
 │           │   ├── PollEventType.java             # Lifecycle event types (VOTE_CAST, POLL_CREATED, etc.)
 │           │   ├── PollEvent.java                 # Event payload dispatched to observers
@@ -154,7 +158,7 @@ The graphical user interface follows modern, minimal desktop design principles:
 
 ---
 
-## 7. Automated Test Suite (10 Comprehensive Tests)
+## 7. Automated Test Suite (11 Comprehensive Tests)
 
 A standalone test runner ([`VotingSystemTest.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/test/com/polling/test/VotingSystemTest.java)) is included to verify all functional requirements and OOP principles without third-party dependencies:
 
@@ -168,6 +172,7 @@ A standalone test runner ([`VotingSystemTest.java`](file:///Users/aneekdutta/Dow
 - **Test 8**: Observer Pattern Event Dispatching (verifies real-time event dispatching on poll actions).
 - **Test 9**: Strategy Pattern (asserts differences between Plurality and Majority Threshold runoff mandates).
 - **Test 10**: Report Exporter (verifies valid output for CSV spreadsheets and certified audit text reports).
+- **Test 11**: Supabase Cloud Database Integration (verifies live PostgreSQL connectivity, REST API, and remote audit logging).
 
 Run the tests anytime with:
 ```bash

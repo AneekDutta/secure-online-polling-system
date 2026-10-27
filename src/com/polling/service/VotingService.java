@@ -95,6 +95,10 @@ public class VotingService {
             throw new DuplicateVoteException("Vote could not be recorded due to a duplicate submission collision.");
         // End if
         }
+        // Asynchronously persist ballot to Supabase PostgreSQL database
+        this.pollManager.getSupabaseClient().recordBallotAsync(pollId, receipt.getVoterHash(), cleanOption, receipt);
+        // Asynchronously record vote event in Supabase audit table
+        this.pollManager.getSupabaseClient().logAuditEventAsync("VOTE_CAST", pollId, "Ballot registered: " + receipt.getReceiptCode() + " for option \"" + cleanOption + "\"");
         // Dispatch observer event so all open UI panels update in real time
         this.pollManager.notifyEvent(new PollEvent(PollEventType.VOTE_CAST, pollId, "New vote recorded for \"" + cleanOption + "\" in Poll #" + pollId));
         // Return issued ballot receipt

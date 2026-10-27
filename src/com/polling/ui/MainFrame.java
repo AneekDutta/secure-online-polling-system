@@ -93,6 +93,9 @@ public class MainFrame extends JFrame {
     // User status badge label in header
     private final JLabel userBadgeLabel;
 
+    // Cloud database status badge label in header
+    private final JLabel cloudBadgeLabel;
+
     // Constructor initializing services and building main window
     public MainFrame() {
         // Set window title
@@ -124,6 +127,21 @@ public class MainFrame extends JFrame {
 
         // Header user badge label
         this.userBadgeLabel = new JLabel();
+        // Header cloud database status badge label
+        this.cloudBadgeLabel = new JLabel("  ☁ Supabase: Checking...  ");
+        // Style cloud badge label
+        this.cloudBadgeLabel.setFont(ModernTheme.FONT_SMALL_BOLD);
+        // Default color
+        this.cloudBadgeLabel.setForeground(ModernTheme.COLOR_TEXT_MUTED);
+        // Default background
+        this.cloudBadgeLabel.setBackground(ModernTheme.COLOR_BG_INPUT);
+        // Make opaque
+        this.cloudBadgeLabel.setOpaque(true);
+        // Border padding
+        this.cloudBadgeLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ModernTheme.COLOR_BORDER, 1),
+            BorderFactory.createEmptyBorder(4, 10, 4, 10)
+        ));
 
         // Initialize CardLayout for tabbed page switching
         this.cardLayout = new CardLayout();
@@ -204,6 +222,8 @@ public class MainFrame extends JFrame {
         updateUserBadge();
         // Activate initial tab styling
         updateNavButtonStyles(navPollsBtn);
+        // Verify and update Supabase cloud connectivity status asynchronously
+        checkCloudStatus();
     // End of constructor
     }
 
@@ -303,7 +323,7 @@ public class MainFrame extends JFrame {
         titlePanel.add(appTitle);
 
         // Subtitle
-        JLabel appSub = new JLabel("College OOP Project  •  Secure In-Memory Java Swing Platform");
+        JLabel appSub = new JLabel("College OOP Project  •  Java Swing & Supabase PostgreSQL Cloud Platform");
         // Small font
         appSub.setFont(ModernTheme.FONT_SMALL);
         // Muted color
@@ -320,7 +340,9 @@ public class MainFrame extends JFrame {
         JPanel userContainer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         // Transparent
         userContainer.setOpaque(false);
-        // Add user badge
+        // Add cloud database status badge
+        userContainer.add(cloudBadgeLabel);
+        // Add user persona badge
         userContainer.add(userBadgeLabel);
         // Add to brand row east
         brandRow.add(userContainer, BorderLayout.EAST);
@@ -373,7 +395,7 @@ public class MainFrame extends JFrame {
         noticePanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ModernTheme.COLOR_BORDER));
 
         // Notice message
-        JLabel noticeLabel = new JLabel("Notice: In-Memory Storage Active — All created polls and cast votes reset when the application restarts.");
+        JLabel noticeLabel = new JLabel("Notice: In-Memory Storage & Supabase Cloud PostgreSQL Sync Active — Hybrid Local/Cloud Architecture.");
         // Font
         noticeLabel.setFont(ModernTheme.FONT_SMALL);
         // Muted color
@@ -453,6 +475,41 @@ public class MainFrame extends JFrame {
             ));
         // End if
         }
+    // End of method
+    }
+
+    // Asynchronously checks Supabase cloud connectivity and updates the header badge
+    private void checkCloudStatus() {
+        // Run network check in a separate background thread so the UI thread never freezes
+        java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            // Ping Supabase cloud database
+            return pollManager.getSupabaseClient().isAvailable();
+        // Handle result on Event Dispatch Thread
+        }).thenAccept(connected -> {
+            // Update UI on Swing Event Dispatch Thread
+            SwingUtilities.invokeLater(() -> {
+                // If connected successfully
+                if (connected) {
+                    // Update text
+                    cloudBadgeLabel.setText("  ☁ Supabase: Connected  ");
+                    // Green text
+                    cloudBadgeLabel.setForeground(ModernTheme.COLOR_STATUS_OPEN);
+                    // Light green background
+                    cloudBadgeLabel.setBackground(ModernTheme.COLOR_STATUS_OPEN_BG);
+                // If offline or local mode
+                } else {
+                    // Update text
+                    cloudBadgeLabel.setText("  ☁ Local In-Memory Mode  ");
+                    // Slate text
+                    cloudBadgeLabel.setForeground(ModernTheme.COLOR_TEXT_MUTED);
+                    // Light grey background
+                    cloudBadgeLabel.setBackground(ModernTheme.COLOR_BG_INPUT);
+                // End if
+                }
+            // End lambda
+            });
+        // End thenAccept
+        });
     // End of method
     }
 // End of class

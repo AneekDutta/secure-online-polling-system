@@ -1,6 +1,8 @@
 // Package declaration for service layer components
 package com.polling.service;
 
+// Import SupabaseClient for cloud database integration
+import com.polling.database.SupabaseClient;
 // Import PollEvent for Observer pattern
 import com.polling.event.PollEvent;
 // Import PollEventListener interface
@@ -42,6 +44,9 @@ public class PollManager {
     // Thread-safe collection of registered observers (Observer Pattern)
     private final List<PollEventListener> eventListeners;
 
+    // Supabase cloud client for remote PostgreSQL database synchronization
+    private final SupabaseClient supabaseClient;
+
     // Default constructor initializing in-memory collections and initial sample data
     public PollManager() {
         // Instantiate HashMap for fast poll lookup by ID
@@ -50,6 +55,8 @@ public class PollManager {
         this.idCounter = new AtomicInteger(101);
         // Initialize observer listeners list
         this.eventListeners = new CopyOnWriteArrayList<>();
+        // Initialize Supabase PostgreSQL cloud client
+        this.supabaseClient = new SupabaseClient();
         // Pre-populate realistic sample polls for immediate demonstration
         seedSamplePolls();
     // End of constructor
@@ -144,6 +151,10 @@ public class PollManager {
         Poll newPoll = new Poll(pollId, question.trim(), cleanOptions);
         // Store poll into the HashMap catalog
         this.pollCatalog.put(pollId, newPoll);
+        // Asynchronously sync new poll and options to Supabase PostgreSQL database
+        this.supabaseClient.syncPollAsync(newPoll);
+        // Asynchronously log audit event to Supabase
+        this.supabaseClient.logAuditEventAsync("POLL_CREATED", pollId, "Poll created: \"" + newPoll.getQuestion() + "\"");
         // Notify observers that a new poll was published
         notifyEvent(new PollEvent(PollEventType.POLL_CREATED, pollId, "Poll #" + pollId + " created: \"" + newPoll.getQuestion() + "\""));
         // Return the created poll
@@ -193,6 +204,8 @@ public class PollManager {
         Poll poll = getPoll(pollId);
         // Call closePoll on target entity
         poll.closePoll();
+        // Log close event to Supabase
+        this.supabaseClient.logAuditEventAsync("POLL_CLOSED", pollId, "Poll closed by admin " + user.getName());
         // Dispatch observer notification
         notifyEvent(new PollEvent(PollEventType.POLL_CLOSED, pollId, "Poll #" + pollId + " closed by admin " + user.getName()));
     // End of method
@@ -210,8 +223,17 @@ public class PollManager {
         Poll poll = getPoll(pollId);
         // Call openPoll on target entity
         poll.openPoll();
+        // Log reopen event to Supabase
+        this.supabaseClient.logAuditEventAsync("POLL_REOPENED", pollId, "Poll reopened by admin " + user.getName());
         // Dispatch observer notification
         notifyEvent(new PollEvent(PollEventType.POLL_REOPENED, pollId, "Poll #" + pollId + " reopened by admin " + user.getName()));
+    // End of method
+    }
+
+    // Public getter for accessing the Supabase client
+    public SupabaseClient getSupabaseClient() {
+        // Return Supabase client instance
+        return this.supabaseClient;
     // End of method
     }
 
