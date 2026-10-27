@@ -377,6 +377,34 @@ public class MainFrame extends JFrame {
         // Add to nav row
         navRow.add(navAdminBtn);
 
+        // Configure Live Walkthrough button to open the graphical animated walkthrough window
+        JButton navWalkthroughBtn = new JButton("▶ Live Walkthrough Demo");
+        // Set bold font
+        navWalkthroughBtn.setFont(ModernTheme.FONT_BODY_BOLD);
+        // Set light purple background
+        navWalkthroughBtn.setBackground(new Color(237, 233, 254));
+        // Set purple text color
+        navWalkthroughBtn.setForeground(new Color(109, 40, 217));
+        // Set cursor to hand
+        navWalkthroughBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        // Set border
+        navWalkthroughBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(196, 181, 253), 1),
+            BorderFactory.createEmptyBorder(6, 12, 6, 12)
+        ));
+        // Add action listener to instantiate and display visual walkthrough window
+        navWalkthroughBtn.addActionListener(e -> {
+            // Instantiate visual walkthrough window
+            VisualWalkthroughWindow win = new VisualWalkthroughWindow();
+            // Make visible on screen
+            win.setVisible(true);
+            // Bring to front
+            win.toFront();
+        // End listener
+        });
+        // Add walkthrough button to nav row
+        navRow.add(navWalkthroughBtn);
+
         // Add nav row to header south
         headerPanel.add(navRow, BorderLayout.SOUTH);
 
