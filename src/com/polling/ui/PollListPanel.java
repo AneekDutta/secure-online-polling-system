@@ -1,3 +1,13 @@
+//What it is: The Poll Catalog / Feed Screen (JPanel).
+//Role: Displays all polls in a searchable, scrollable feed.
+//How it is used:
+//1. Features a live search bar to filter polls by question text in real time.
+//2. Provides quick filter buttons: All, Open, and Closed.
+//3. For each poll found, it embeds a PollCardPanel.
+//4. Implements PollEventListener so if a poll is created or closed elsewhere, this list auto-refreshes.
+
+
+
 // Package declaration for user interface components
 package com.polling.ui;
 

@@ -1,3 +1,7 @@
+//IMMUTABLE CRYPTOGRAPHIC RECEIPT
+//ROLE: A digital, tamper-evident cryptographic receipt issued to a voter after successfully casting a ballot.
+//KEY INTERNAL FIELDS: receiptCode(unique verification code), pollId, voterHash, selectedOption, issuedAt
+
 // Package declaration for domain model entities
 package com.polling.model;
 
@@ -67,7 +71,7 @@ public class VoteReceipt {
 
     // Public getter for issue timestamp
     public Date getIssuedAt() {
-        // Return defensive copy of timestamp
+        // Return defensive copy of timestamp to protext immutability
         return new Date(this.issuedAt.getTime());
     // End of method
     }

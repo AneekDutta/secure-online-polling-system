@@ -1,3 +1,11 @@
+//ROLE: Absolute Majority Threshold (>50%) & Runoff Electoral Strategy
+//WHAT IT DOES:-
+//1. Calculates 50% Threshold: Determines the strict majority needed (totalVotes / 2.0).
+//2. Declares Absolute Winner: Declares an outright winner only if top option received strictly >50% of all votes.
+//3. Mandates Runoff Elections: If no option achieves >50%, flags requiresRunoff = true and lists top contenders for a round 2.
+//4. Prevents Zero-Vote Bugs: Safely handles empty/unvoted polls to avoid division-by-zero.
+
+
 // Package declaration for algorithmic strategy pattern implementations
 package com.polling.strategy;
 

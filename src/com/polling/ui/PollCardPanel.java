@@ -1,3 +1,12 @@
+//What it is: An Individual Poll Voting Card 
+//Role: Displays the question and options for one specific poll. Allows the user to vote.
+//HOW IT IS USED:
+//1. Displays the poll ID, question, creation timestamp, and status pill (OPEN or CLOSED).
+//2. Lists options with single-choice radio buttons (ButtonGroup).
+//3. Provides a voter ID input field and a "Cast Vote" button.
+//4. When a vote is submitted, it calls VotingService.castVote(), catches duplicate vote attempts, and pops up a cryptographic Vote Receipt for the voter.
+
+
 // Package declaration for user interface components
 package com.polling.ui;
 

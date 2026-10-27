@@ -1,3 +1,10 @@
+//What it is: The Design System & Styling Kit (utility class).
+//ROLE: Ensures every button, font, border, and background color looks modern and cohesive.
+//HOW IT IS USED: 1. defines the coloue palette
+//                2. provides font definitions
+
+
+
 // Package declaration for user interface components
 package com.polling.ui;
 

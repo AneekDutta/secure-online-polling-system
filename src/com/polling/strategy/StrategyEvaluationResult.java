@@ -1,3 +1,10 @@
+//ROLE: Immutable Data Transfer Object (DTO) packaging Strategy calculation verdicts
+//WHAT IT DOES:-
+//1. Encapsulates Output Metrics: Stores winningOptions, tie boolean, requiresRunoff boolean, and verdict description into an object.
+//2. Defensively Protects Data: Wraps winningOptions in Collections.unmodifiableList so that nobody tampers with the election outcome after calculations.
+//3. Provides Clean Accessors: Offers simple getters used by ResultAnalyzer and UI display panels.
+
+
 // Package declaration for algorithmic strategy pattern implementations
 package com.polling.strategy;
 

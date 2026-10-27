@@ -1,3 +1,11 @@
+//What it is: The Analytics & Charts Dashboard 
+//ROLE: Displays results, charts, and export options.
+//HOW IT IS USED:1. Polls can be selected from a dropdown to view their results.
+//               2. Supports two voting systems (Plurality and Majority) using Strategy Pattern to show different outcomes for the same data.
+//               3. Contains auto-updating bar charts (Observer Pattern).
+//               4. Has "Export CSV" and "Export Text" buttons.
+
+
 // Package declaration for user interface components
 package com.polling.ui;
 

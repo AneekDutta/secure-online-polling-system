@@ -1,3 +1,12 @@
+//ROLE: Tallying, Percentage Calculation & Strategy-Based Outcome Evaluation
+//WHAT IT DOES:-
+//1. Tally & Percentages: Reads raw vote counts from a Poll, preserves option ordering using LinkedHashMap, 
+//                        and computes exact percentage shares rounded to 1 decimal place (avoiding division-by-zero if 0 votes are cast).
+//2. Strategy Pattern: Instead of hardcoding winner logic, it delegates the outcome evaluation to a WinningStrategy (defaults to 
+//                     PluralityWinningStrategy, but supports Majority/Runoff strategies).
+//3. Produces Summary: Packages all computed metrics into an immutable PollResultSummary object.
+
+
 // Package declaration for service layer components
 package com.polling.service;
 

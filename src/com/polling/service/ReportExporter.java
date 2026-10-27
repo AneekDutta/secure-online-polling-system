@@ -1,3 +1,15 @@
+//ROLE:  File I/O Exporter (CSV & Certified Audit Reports)
+//WHAT IT DOES:-
+//1. CSV Export (exportToCSV):
+//            -Generates RFC-4180 compliant CSV files with headers, metadata comments, option names, vote counts, and percentage shares.
+//            -Uses escapeCsv() to safely handle option names with commas or quotes.
+//2. Official Audit Export (exportCertifiedAuditReport):
+//            -Uses Java BufferedWriter to write a formatted .txt report.
+//            -Includes official election certification banners, timestamps, outcome verdicts, and candidate breakdown tables.
+//            -Audit Trail: Prints the list of SHA-256 hashed voter IDs stored in the poll's HashSet.
+//            -This proves each ballot came from a distinct voter while guaranteeing voter ballot secrecy (plain-text IDs are never revealed).
+
+
 // Package declaration for service layer components
 package com.polling.service;
 

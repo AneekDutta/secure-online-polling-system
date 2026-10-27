@@ -1,3 +1,8 @@
+//SUBCLASS OF USER
+//ROLE: Represents an authorized administrator who governs poll lifecycles.
+//SPECIFIC ATTRIBUTES: department: Authority unit (e.g., "System Administration", "Campus Election Commission").
+
+
 // Package declaration for domain model entities
 package com.polling.model;
 
@@ -49,7 +54,7 @@ public class Admin extends User {
     // Overridden polymorphic method returning true for poll management capabilities
     @Override
     public boolean canManagePolls() {
-        // Administrators are explicitly allowed to manage and close polls
+        // this grants Administrators allowance to reopen polls and close polls
         return true;
     // End of method
     }

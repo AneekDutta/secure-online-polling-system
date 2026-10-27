@@ -1,3 +1,15 @@
+//ROLE: Ballot Validation, Submission & Cryptographic Receipt Generation
+//WHAT IT DOES:- 
+//1. Strict Validation Pipeline: Before a vote is counted, it validates:
+//-Voter ID format (non-empty, minimum 3 characters).
+//-Poll existence (via pollManager.getPoll(pollId)).
+//-Poll status (throws PollClosedException if the poll is closed).
+//-One-person-one-vote rule (checks SHA-256 salted hashes to detect duplicates; throws DuplicateVoteException).
+//-Option validity (ensures the selected option is an authorized choice; throws InvalidVoteException).
+//2. Receipt Issuance: Calls poll.recordVoteWithReceipt() to generate a cryptographic VoteReceipt containing a timestamp and receipt hash so voters can verify their ballot later.
+//3. Real-time Event Dispatch: Triggers a VOTE_CAST event so UI dashboards and vote counters refresh immediately.
+//4. Receipt Verification: Offers verifyReceipt(pollId, receiptCode) so voters can verify if their ballot was genuinely recorded
+
 package com.polling.service;
 
 // Import PollEvent for Observer pattern

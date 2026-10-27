@@ -1,3 +1,7 @@
+//SUBCLASS OF USER
+//ROLE: Represents a standard voting participant.
+
+
 // Package declaration for domain model entities
 package com.polling.model;
 

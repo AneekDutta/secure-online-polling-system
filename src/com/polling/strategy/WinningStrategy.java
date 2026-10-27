@@ -1,3 +1,10 @@
+//ROLE: Strategy Interface defining the standard contract for electoral counting rules
+//WHAT IT DOES:-
+//1. Establishes the Blueprint: Declares getStrategyName(), getRuleExplanation(), and evaluateWinners().
+//2. Decouples Calculation from Services: Allows ResultAnalyzer to evaluate results without hardcoding specific mathematical formulas.
+//3. Supports Open/Closed Principle: New election methods (e.g., Ranked-Choice) can be added without altering existing code.
+
+
 // Package declaration for algorithmic strategy pattern implementations
 package com.polling.strategy;
 

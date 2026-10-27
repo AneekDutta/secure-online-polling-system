@@ -1,3 +1,10 @@
+//What it is: The Main Application Window (JFrame).
+//Role: It acts as the "shell" or master container of the entire desktop app
+//How it is used:
+//1. Displays the top navigation bar with tab buttons: Polls, Create Poll, Results, and Admin.
+//2. Shows status badges in the top header (active user persona, cloud database connection status).
+//3. Uses a Java CardLayout to seamlessly flip between the 4 main sub-panels without opening new windows.
+
 // Package declaration for user interface components
 package com.polling.ui;
 

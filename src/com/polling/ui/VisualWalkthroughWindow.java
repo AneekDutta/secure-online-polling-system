@@ -1,3 +1,7 @@
+//What it is: The Interactive Test Runner & Demonstration Window
+//ROLE: A standalone secondary window that runs an automated 11-stage demo of the whole system.
+
+
 // Package declaration for UI components
 package com.polling.ui;
 

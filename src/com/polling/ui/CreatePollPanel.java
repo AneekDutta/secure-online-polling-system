@@ -1,3 +1,12 @@
+//What it is: The "New Poll" Creation Form 
+//ROLE:  Allows organizers to author and publish new polls.
+//HOW IT IS USED:-
+//1. Has a text input for the poll question.
+//2. Provides dynamic option rows where users can click "+ Add Option" or "Remove" to add as many candidates/choices as needed.
+//3. Validates inputs (e.g., questions cannot be blank, must have at least 2 distinct options).
+//4. When published, calls PollManager.createPoll() and switches the view back to the poll list.
+
+
 // Package declaration for user interface components
 package com.polling.ui;
 

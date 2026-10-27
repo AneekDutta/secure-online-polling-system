@@ -1,3 +1,16 @@
+//ROLE: Immutable Data Transfer Object (DTO) for Analytical Results
+//WHAT IT DOES:-
+//Encapsulates Snapshot Results: Holds a read-only snapshot of an analyzed poll at a specific point in time:
+//                        pollId, question, and open status.
+//                        totalVotes.
+//                        optionCounts (Map<String, Integer>) wrapped in Collections.unmodifiableMap.
+//                        optionPercentages (Map<String, Double>).
+//                        winningOptions (List<String>) and a tie boolean flag.
+//                        requiresRunoff and strategyName
+//Human-Readable Verdict: Provides getWinnerDescription(), which produces clean text verdicts like 
+//                        "Leading Option: Java", "Tie between: Java, Python", or "No votes recorded yet.".
+
+
 // Package declaration for service layer components
 package com.polling.service;
 

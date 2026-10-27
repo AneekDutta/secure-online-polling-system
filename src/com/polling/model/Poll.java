@@ -1,3 +1,7 @@
+//CORE AGGRGATE ROOT/DOMAIN ENTITY
+//ROLE: The heart of the application. It encapsulates a question, its candidate choices, and live voting state.
+//KEY INTERNAL FEILDS: pollID, question, options, voteCounts, votedVoterHashes,issuedReceipts,open
+
 // Package declaration for domain model entities
 package com.polling.model;
 

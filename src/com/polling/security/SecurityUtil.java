@@ -1,3 +1,17 @@
+//SHA 256 stands for Secure Hash Algorithm 256-bit. It is a cryptographic hash function
+//  that converts input data into a fixed length hash value of 256 bits(32 bytes or 64 hexadecimal characters.)
+//  it belongs to SHA-2 family of cryptographic hash algo.
+
+
+//In an electronic voting system, there is a fundamental paradox:
+//How do you guarantee that a voter votes only once, while ensuring that nobody (not even administrators or database operators) can link a voter's ballot to their real identity?
+//SecurityUtil.java solves this using one-way SHA-256 cryptographic hashing with salting and peppering, coupled with tamper-evident receipt generation.
+
+//CRYPTOGRAPHIC SECURITY UTILITY CLASS
+//ROLE: Delivers SHA-256 salted voter pseudonymization and tamper-evident ballot receipt generation.
+//KEY METHODS: hashVoterId (salting + peppering), generateReceiptCode (verifiable receipt), computeSha256Hex (cryptographic digest)
+
+
 // Package declaration for cryptographic security utilities
 package com.polling.security;
 
@@ -17,10 +31,16 @@ public final class SecurityUtil {
     }
 
     // Fixed application pepper string ensuring additional entropy
-    private static final String SYSTEM_PEPPER = "SECURE_OOP_POLLING_2026_PEPPER";
-
+    private static final String SYSTEM_PEPPER = "SECURE_OOP_POLLING_2026_PEPPER"; //(CONSTANT)
+                            //Pepper (SYSTEM_PEPPER): An application-level secret string combined with every hash.
+                            //Even if an attacker obtains an offline dictionary / rainbow table for voter IDs, they cannot crack the hashes without this pepper.
+    
+    
     // Hashes a voter ID using SHA-256 with poll-specific salt to protect voter anonymity
-    public static String hashVoterId(String voterId, String pollId) {
+    //Salt (pollId): Changes per poll. Ensures that the same voter voting in Poll #1 and Poll #2 
+    //                produces completely different hashes, preventing cross-poll tracking
+
+    public static String hashVoterId(String voterId, String pollId) {//Produces an irreversible, anonymized 64-character hex hash from a voter ID and a target poll.
         // Return empty string for null voter ID
         if (voterId == null) {
             // Null guard return
@@ -35,6 +55,9 @@ public final class SecurityUtil {
         String combined = cleanVoterId + ":" + salt + ":" + SYSTEM_PEPPER;
         // Compute and return hexadecimal SHA-256 hash
         return computeSha256Hex(combined);
+
+        //THIS IS USED IN: Poll.java: 
+        // hasVoted() and recordVoteWithReceipt() check whether votedVoterHashes.contains(voterHash) in $O(1)$ time.
     // End of method
     }
 

@@ -1,3 +1,14 @@
+//What it is: The Security & Governance Console (JPanel).
+//Role: Gives supervisors tools to manage polls, verify ballots, and inspect cryptographic proofs.
+//HOW IT IS USED:-
+//1. Role Switcher: Lets you toggle between Administrator and Standard Voter to test role-based permissions in real time.
+//2. Close / Reopen Polls: Closes active elections or reopens closed ones (disabled if you are acting as a voter).
+//3. Verify Receipt: Lets an admin type in a voter's receipt code to check if that vote was genuinely tallied.
+//4. Audit Hashes: Opens a dialog showing the salted SHA-256 voter hashes in the HashSet to prove voter anonymity.
+//5. Export Report: Exports a certified audit log file
+
+
+
 // Package declaration for user interface components
 package com.polling.ui;
 

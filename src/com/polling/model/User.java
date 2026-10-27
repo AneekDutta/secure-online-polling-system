@@ -1,3 +1,6 @@
+//ABSTRACT BASE CLASS
+//Role: Serves as the base class for all actors in the system. encapsultes shared identity fields: 1. userID & 2. name
+
 // Package declaration for domain model entities
 package com.polling.model;
 
@@ -33,13 +36,13 @@ public abstract class User {
     // End of method
     }
 
-    // Abstract method to get the role title of the user (implemented polymorphically)
+    // Abstract method to get the role title of the user(ADMINISTRATOR OR VOTER) (implemented polymorphically)
     public abstract String getRole();
 
-    // Abstract method returning a textual description of user permissions
+    // Abstract method returning a HUMAN READABLE description of user permissions
     public abstract String getPermissionsDescription();
 
-    // Abstract method indicating whether this user type has management permissions
+    // Abstract method indicating whether this user type has administrative priviledges
     public abstract boolean canManagePolls();
 
     // Polymorphic toString implementation providing a readable representation

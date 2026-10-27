@@ -1,3 +1,12 @@
+//ROLE: Central poll lifecycle and storage  coordinator
+//What it does: 1. In-Memory Storage: Maintains the primary collection of all polls in a HashMap<String, Poll> for fast O(1) lookup by Poll ID.
+//              2. ID Generation: Uses a thread-safe AtomicInteger starting at 101 to automatically assign sequential identifiers (POLL-101, POLL-102, etc.).
+//              3. Poll Lifecycle: Creates new polls, closes existing polls, and reopens polls.
+//              4. Security & Authorization: Ensures that administrative actions (closing/reopening a poll) are only executed by authorized users via user.canManagePolls().
+//              5. Observer Pattern (Subject): Maintains a list of PollEventListeners in a CopyOnWriteArrayList. Whenever a poll is created, closed, or reopened, it dispatches events (POLL_CREATED, POLL_CLOSED, POLL_REOPENED) so the UI updates automatically in real-time.
+//              6. Cloud Sync: Interacts with SupabaseClient to asynchronously sync poll definitions and audit logs to a remote database
+
+
 // Package declaration for service layer components
 package com.polling.service;
 

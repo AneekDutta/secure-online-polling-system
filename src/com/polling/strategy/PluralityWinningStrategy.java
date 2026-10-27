@@ -1,3 +1,11 @@
+//ROLE: First-Past-The-Post (Plurality) Electoral Strategy
+//WHAT IT DOES:-
+//1. Finds Highest Vote Count: Scans all options and identifies the maximum tally.
+//2. Declares Direct Winner: Whichever candidate has the highest vote wins, regardless of whether they reached 50%.
+//3. Detects Equal Ties: Flags isTie = true if two or more options share the top score.
+//4. Concludes Election: Never triggers a runoff election(second round for voting) (requiresRunoff = false).
+
+
 // Package declaration for algorithmic strategy pattern implementations
 package com.polling.strategy;
 
