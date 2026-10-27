@@ -1,3 +1,13 @@
+//Role: Protects ballot submission integrity against malformed or illegal vote payloads.
+//IT IS THROWN WHEN: 1. In VotingService.castVoteWithReceipt
+//                      if no option was selected
+//                   2. In VotingService.castVoteWithReceipt
+//                      if the submitted candidate exception does not exist in poll.getOptions()
+
+
+
+
+
 // Package declaration for custom exceptions
 package com.polling.exception;
 

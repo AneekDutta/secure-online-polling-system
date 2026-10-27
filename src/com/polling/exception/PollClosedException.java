@@ -1,3 +1,12 @@
+//ROLE: Enforces poll lifecycle boundaries.
+//THROWN WHEN: 1. In VotingService.castVoteWithReceipt
+//                when !poll.isOpen()
+//                LINE-72
+
+
+
+
+
 // Package declaration for custom exceptions
 package com.polling.exception;
 

@@ -1,3 +1,6 @@
+//Acts as the common supertype for all domain errors across the system.
+
+
 // Package declaration for custom exceptions
 package com.polling.exception;
 
