@@ -88,6 +88,9 @@ public class PollCardPanel extends JPanel {
     // Text field for voter ID entry
     private final JTextField voterIdField;
 
+    // Vote submission button
+    private JButton voteButton;
+
     // Status / feedback label for inline messages
     private final JLabel feedbackLabel;
 
@@ -269,13 +272,13 @@ public class PollCardPanel extends JPanel {
         actionRow.add(voterIdField);
 
         // Create vote button
-        JButton voteButton = new JButton("Submit Vote");
+        this.voteButton = new JButton("Submit Vote");
         // Style as primary button
-        ModernTheme.stylePrimaryButton(voteButton);
+        ModernTheme.stylePrimaryButton(this.voteButton);
         // Disable button if poll is closed
-        voteButton.setEnabled(poll.isOpen());
+        this.voteButton.setEnabled(poll.isOpen());
         // Attach click listener for voting
-        voteButton.addActionListener(new ActionListener() {
+        this.voteButton.addActionListener(new ActionListener() {
             // Invoked when vote button is clicked
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -286,7 +289,7 @@ public class PollCardPanel extends JPanel {
         // End of listener
         });
         // Add to action row
-        actionRow.add(voteButton);
+        actionRow.add(this.voteButton);
 
         // Create View Results button
         JButton viewResultsButton = new JButton("View Results (" + poll.getTotalVotes() + ")");
@@ -470,6 +473,34 @@ public class PollCardPanel extends JPanel {
         // Set foreground color
         feedbackLabel.setForeground(color);
     // End of method
+    }
+
+    // Returns voter ID input field for human simulation
+    public JTextField getVoterIdField() {
+        // Return voter ID field
+        return this.voterIdField;
+    // End method
+    }
+
+    // Returns option button group for human simulation
+    public ButtonGroup getOptionButtonGroup() {
+        // Return button group
+        return this.optionButtonGroup;
+    // End method
+    }
+
+    // Returns vote button for human simulation
+    public JButton getVoteButton() {
+        // Return vote button
+        return this.voteButton;
+    // End method
+    }
+
+    // Returns poll instance for human simulation
+    public Poll getPoll() {
+        // Return poll
+        return this.poll;
+    // End method
     }
 // End of class
 }

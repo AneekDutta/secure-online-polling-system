@@ -96,6 +96,9 @@ public class MainFrame extends JFrame {
     // Cloud database status badge label in header
     private final JLabel cloudBadgeLabel;
 
+    // Simulation status banner label across the top
+    private final JLabel simulationBannerLabel;
+
     // Constructor initializing services and building main window
     public MainFrame() {
         // Set window title
@@ -142,6 +145,24 @@ public class MainFrame extends JFrame {
             BorderFactory.createLineBorder(ModernTheme.COLOR_BORDER, 1),
             BorderFactory.createEmptyBorder(4, 10, 4, 10)
         ));
+
+        // Initialize simulation banner label
+        this.simulationBannerLabel = new JLabel(" ");
+        // Set bold font
+        this.simulationBannerLabel.setFont(ModernTheme.FONT_BODY_BOLD);
+        // Set dark green text color
+        this.simulationBannerLabel.setForeground(new Color(22, 101, 52));
+        // Set light green background
+        this.simulationBannerLabel.setBackground(new Color(220, 252, 231));
+        // Set opaque
+        this.simulationBannerLabel.setOpaque(true);
+        // Set border
+        this.simulationBannerLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(187, 247, 208)),
+            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
+        // Hide by default
+        this.simulationBannerLabel.setVisible(false);
 
         // Initialize CardLayout for tabbed page switching
         this.cardLayout = new CardLayout();
@@ -290,6 +311,65 @@ public class MainFrame extends JFrame {
     // End of method
     }
 
+    // Public method to navigate to a card tab programmatically
+    public void navigateTo(String cardName) {
+        // Switch to target card
+        showCard(cardName);
+    // End method
+    }
+
+    // Updates simulation banner text and visibility
+    public void setSimulationBanner(String text, boolean visible) {
+        // Swing invoke later for thread safety
+        SwingUtilities.invokeLater(() -> {
+            // Set banner text
+            simulationBannerLabel.setText(text);
+            // Set visibility
+            simulationBannerLabel.setVisible(visible);
+            // Revalidate layout
+            revalidate();
+            // Repaint
+            repaint();
+        // End invokeLater
+        });
+    // End method
+    }
+
+    // Public getter for pollListPanel
+    public PollListPanel getPollListPanel() {
+        // Return pollListPanel
+        return this.pollListPanel;
+    // End method
+    }
+
+    // Public getter for createPollPanel
+    public CreatePollPanel getCreatePollPanel() {
+        // Return createPollPanel
+        return this.createPollPanel;
+    // End method
+    }
+
+    // Public getter for resultsPanel
+    public ResultsPanel getResultsPanel() {
+        // Return resultsPanel
+        return this.resultsPanel;
+    // End method
+    }
+
+    // Public getter for adminPanel
+    public AdminPanel getAdminPanel() {
+        // Return adminPanel
+        return this.adminPanel;
+    // End method
+    }
+
+    // Public getter for pollManager
+    public PollManager getPollManager() {
+        // Return pollManager
+        return this.pollManager;
+    // End method
+    }
+
     // Assembles the top header panel containing branding, nav bar, and active user persona
     private JPanel createHeaderPanel() {
         // Container panel
@@ -405,8 +485,41 @@ public class MainFrame extends JFrame {
         // Add walkthrough button to nav row
         navRow.add(navWalkthroughBtn);
 
-        // Add nav row to header south
-        headerPanel.add(navRow, BorderLayout.SOUTH);
+        // Configure Human Simulation button to run autonomous realistic user simulation
+        JButton navSimulationBtn = new JButton("🤖 Run Human Simulation");
+        // Set bold font
+        navSimulationBtn.setFont(ModernTheme.FONT_BODY_BOLD);
+        // Set emerald background
+        navSimulationBtn.setBackground(new Color(220, 252, 231));
+        // Set emerald text color
+        navSimulationBtn.setForeground(new Color(22, 101, 52));
+        // Set cursor to hand
+        navSimulationBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        // Set border
+        navSimulationBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(187, 247, 208), 1),
+            BorderFactory.createEmptyBorder(6, 12, 6, 12)
+        ));
+        // Add action listener to start autonomous simulation
+        navSimulationBtn.addActionListener(e -> {
+            // Start simulation asynchronously
+            com.polling.demo.GuiHumanSimulationController.startSimulation(this);
+        // End listener
+        });
+        // Add simulation button to nav row
+        navRow.add(navSimulationBtn);
+
+        // Bottom section of header holding nav tabs and simulation banner
+        JPanel headerBottom = new JPanel();
+        // Set vertical box layout
+        headerBottom.setLayout(new BoxLayout(headerBottom, BoxLayout.Y_AXIS));
+        // Add nav row
+        headerBottom.add(navRow);
+        // Add simulation banner
+        headerBottom.add(simulationBannerLabel);
+
+        // Add headerBottom to header south
+        headerPanel.add(headerBottom, BorderLayout.SOUTH);
 
         // Return header panel
         return headerPanel;

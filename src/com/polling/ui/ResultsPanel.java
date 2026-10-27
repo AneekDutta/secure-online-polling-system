@@ -812,5 +812,19 @@ public class ResultsPanel extends JPanel implements PollEventListener {
         resultsContentPanel.add(emptyPanel);
     // End of method
     }
+
+    // Exposes poll dropdown selector for human simulation
+    public JComboBox<?> getPollSelector() {
+        // Return poll selector
+        return this.pollSelector;
+    // End method
+    }
+
+    // Exposes strategy dropdown selector for human simulation
+    public JComboBox<?> getStrategySelector() {
+        // Return strategy selector
+        return this.strategySelector;
+    // End method
+    }
 // End of class
 }

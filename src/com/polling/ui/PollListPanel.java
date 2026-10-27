@@ -377,5 +377,24 @@ public class PollListPanel extends JPanel implements PollEventListener {
         SwingUtilities.invokeLater(this::refreshPolls);
     // End of method
     }
+
+    // Returns all active PollCardPanel instances currently rendered in the catalog
+    public java.util.List<PollCardPanel> getPollCards() {
+        // Create results list
+        java.util.List<PollCardPanel> list = new java.util.ArrayList<>();
+        // Iterate through children of cardsContainer
+        for (java.awt.Component comp : cardsContainer.getComponents()) {
+            // Check if component is a PollCardPanel
+            if (comp instanceof PollCardPanel) {
+                // Add to list
+                list.add((PollCardPanel) comp);
+            // End if
+            }
+        // End loop
+        }
+        // Return list
+        return list;
+    // End method
+    }
 // End of class
 }
