@@ -12,3 +12,9 @@ bin/
 .settings/
 .project
 .classpath
+
+# Exported demonstration files
+election-*-demo.*
+poll-*-results.csv
+poll-*-audit.txt
+poll-*-audit-report.txt

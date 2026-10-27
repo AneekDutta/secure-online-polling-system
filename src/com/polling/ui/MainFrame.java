@@ -93,6 +93,12 @@ public class MainFrame extends JFrame {
     // User status badge label in header
     private final JLabel userBadgeLabel;
 
+    // Cloud database status badge label in header
+    private final JLabel cloudBadgeLabel;
+
+    // Simulation status banner label across the top
+    private final JLabel simulationBannerLabel;
+
     // Constructor initializing services and building main window
     public MainFrame() {
         // Set window title
@@ -124,6 +130,39 @@ public class MainFrame extends JFrame {
 
         // Header user badge label
         this.userBadgeLabel = new JLabel();
+        // Header cloud database status badge label
+        this.cloudBadgeLabel = new JLabel("  ☁ Supabase: Checking...  ");
+        // Style cloud badge label
+        this.cloudBadgeLabel.setFont(ModernTheme.FONT_SMALL_BOLD);
+        // Default color
+        this.cloudBadgeLabel.setForeground(ModernTheme.COLOR_TEXT_MUTED);
+        // Default background
+        this.cloudBadgeLabel.setBackground(ModernTheme.COLOR_BG_INPUT);
+        // Make opaque
+        this.cloudBadgeLabel.setOpaque(true);
+        // Border padding
+        this.cloudBadgeLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ModernTheme.COLOR_BORDER, 1),
+            BorderFactory.createEmptyBorder(4, 10, 4, 10)
+        ));
+
+        // Initialize simulation banner label
+        this.simulationBannerLabel = new JLabel(" ");
+        // Set bold font
+        this.simulationBannerLabel.setFont(ModernTheme.FONT_BODY_BOLD);
+        // Set dark green text color
+        this.simulationBannerLabel.setForeground(new Color(22, 101, 52));
+        // Set light green background
+        this.simulationBannerLabel.setBackground(new Color(220, 252, 231));
+        // Set opaque
+        this.simulationBannerLabel.setOpaque(true);
+        // Set border
+        this.simulationBannerLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(187, 247, 208)),
+            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
+        // Hide by default
+        this.simulationBannerLabel.setVisible(false);
 
         // Initialize CardLayout for tabbed page switching
         this.cardLayout = new CardLayout();
@@ -177,6 +216,13 @@ public class MainFrame extends JFrame {
             this::refreshAllViews
         );
 
+        // Register observers with PollManager for automatic event-driven updates (Observer Pattern)
+        this.pollManager.addEventListener(this.pollListPanel);
+        // Register results panel observer
+        this.pollManager.addEventListener(this.resultsPanel);
+        // Register admin panel observer
+        this.pollManager.addEventListener(this.adminPanel);
+
         // Add pages to card layout panel
         pagesPanel.add(pollListPanel, "POLLS");
         // Add create page
@@ -197,6 +243,8 @@ public class MainFrame extends JFrame {
         updateUserBadge();
         // Activate initial tab styling
         updateNavButtonStyles(navPollsBtn);
+        // Verify and update Supabase cloud connectivity status asynchronously
+        checkCloudStatus();
     // End of constructor
     }
 
@@ -263,6 +311,65 @@ public class MainFrame extends JFrame {
     // End of method
     }
 
+    // Public method to navigate to a card tab programmatically
+    public void navigateTo(String cardName) {
+        // Switch to target card
+        showCard(cardName);
+    // End method
+    }
+
+    // Updates simulation banner text and visibility
+    public void setSimulationBanner(String text, boolean visible) {
+        // Swing invoke later for thread safety
+        SwingUtilities.invokeLater(() -> {
+            // Set banner text
+            simulationBannerLabel.setText(text);
+            // Set visibility
+            simulationBannerLabel.setVisible(visible);
+            // Revalidate layout
+            revalidate();
+            // Repaint
+            repaint();
+        // End invokeLater
+        });
+    // End method
+    }
+
+    // Public getter for pollListPanel
+    public PollListPanel getPollListPanel() {
+        // Return pollListPanel
+        return this.pollListPanel;
+    // End method
+    }
+
+    // Public getter for createPollPanel
+    public CreatePollPanel getCreatePollPanel() {
+        // Return createPollPanel
+        return this.createPollPanel;
+    // End method
+    }
+
+    // Public getter for resultsPanel
+    public ResultsPanel getResultsPanel() {
+        // Return resultsPanel
+        return this.resultsPanel;
+    // End method
+    }
+
+    // Public getter for adminPanel
+    public AdminPanel getAdminPanel() {
+        // Return adminPanel
+        return this.adminPanel;
+    // End method
+    }
+
+    // Public getter for pollManager
+    public PollManager getPollManager() {
+        // Return pollManager
+        return this.pollManager;
+    // End method
+    }
+
     // Assembles the top header panel containing branding, nav bar, and active user persona
     private JPanel createHeaderPanel() {
         // Container panel
@@ -296,7 +403,7 @@ public class MainFrame extends JFrame {
         titlePanel.add(appTitle);
 
         // Subtitle
-        JLabel appSub = new JLabel("College OOP Project  •  Secure In-Memory Java Swing Platform");
+        JLabel appSub = new JLabel("College OOP Project  •  Java Swing & Supabase PostgreSQL Cloud Platform");
         // Small font
         appSub.setFont(ModernTheme.FONT_SMALL);
         // Muted color
@@ -313,7 +420,9 @@ public class MainFrame extends JFrame {
         JPanel userContainer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         // Transparent
         userContainer.setOpaque(false);
-        // Add user badge
+        // Add cloud database status badge
+        userContainer.add(cloudBadgeLabel);
+        // Add user persona badge
         userContainer.add(userBadgeLabel);
         // Add to brand row east
         brandRow.add(userContainer, BorderLayout.EAST);
@@ -348,8 +457,69 @@ public class MainFrame extends JFrame {
         // Add to nav row
         navRow.add(navAdminBtn);
 
-        // Add nav row to header south
-        headerPanel.add(navRow, BorderLayout.SOUTH);
+        // Configure Live Walkthrough button to open the graphical animated walkthrough window
+        JButton navWalkthroughBtn = new JButton("▶ Live Walkthrough Demo");
+        // Set bold font
+        navWalkthroughBtn.setFont(ModernTheme.FONT_BODY_BOLD);
+        // Set light purple background
+        navWalkthroughBtn.setBackground(new Color(237, 233, 254));
+        // Set purple text color
+        navWalkthroughBtn.setForeground(new Color(109, 40, 217));
+        // Set cursor to hand
+        navWalkthroughBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        // Set border
+        navWalkthroughBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(196, 181, 253), 1),
+            BorderFactory.createEmptyBorder(6, 12, 6, 12)
+        ));
+        // Add action listener to instantiate and display visual walkthrough window
+        navWalkthroughBtn.addActionListener(e -> {
+            // Instantiate visual walkthrough window
+            VisualWalkthroughWindow win = new VisualWalkthroughWindow();
+            // Make visible on screen
+            win.setVisible(true);
+            // Bring to front
+            win.toFront();
+        // End listener
+        });
+        // Add walkthrough button to nav row
+        navRow.add(navWalkthroughBtn);
+
+        // Configure Human Simulation button to run autonomous realistic user simulation
+        JButton navSimulationBtn = new JButton("🤖 Run Human Simulation");
+        // Set bold font
+        navSimulationBtn.setFont(ModernTheme.FONT_BODY_BOLD);
+        // Set emerald background
+        navSimulationBtn.setBackground(new Color(220, 252, 231));
+        // Set emerald text color
+        navSimulationBtn.setForeground(new Color(22, 101, 52));
+        // Set cursor to hand
+        navSimulationBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        // Set border
+        navSimulationBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(187, 247, 208), 1),
+            BorderFactory.createEmptyBorder(6, 12, 6, 12)
+        ));
+        // Add action listener to start autonomous simulation
+        navSimulationBtn.addActionListener(e -> {
+            // Start simulation asynchronously
+            com.polling.demo.GuiHumanSimulationController.startSimulation(this);
+        // End listener
+        });
+        // Add simulation button to nav row
+        navRow.add(navSimulationBtn);
+
+        // Bottom section of header holding nav tabs and simulation banner
+        JPanel headerBottom = new JPanel();
+        // Set vertical box layout
+        headerBottom.setLayout(new BoxLayout(headerBottom, BoxLayout.Y_AXIS));
+        // Add nav row
+        headerBottom.add(navRow);
+        // Add simulation banner
+        headerBottom.add(simulationBannerLabel);
+
+        // Add headerBottom to header south
+        headerPanel.add(headerBottom, BorderLayout.SOUTH);
 
         // Return header panel
         return headerPanel;
@@ -366,7 +536,7 @@ public class MainFrame extends JFrame {
         noticePanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ModernTheme.COLOR_BORDER));
 
         // Notice message
-        JLabel noticeLabel = new JLabel("Notice: In-Memory Storage Active — All created polls and cast votes reset when the application restarts.");
+        JLabel noticeLabel = new JLabel("Notice: In-Memory Storage & Supabase Cloud PostgreSQL Sync Active — Hybrid Local/Cloud Architecture.");
         // Font
         noticeLabel.setFont(ModernTheme.FONT_SMALL);
         // Muted color
@@ -446,6 +616,41 @@ public class MainFrame extends JFrame {
             ));
         // End if
         }
+    // End of method
+    }
+
+    // Asynchronously checks Supabase cloud connectivity and updates the header badge
+    private void checkCloudStatus() {
+        // Run network check in a separate background thread so the UI thread never freezes
+        java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            // Ping Supabase cloud database
+            return pollManager.getSupabaseClient().isAvailable();
+        // Handle result on Event Dispatch Thread
+        }).thenAccept(connected -> {
+            // Update UI on Swing Event Dispatch Thread
+            SwingUtilities.invokeLater(() -> {
+                // If connected successfully
+                if (connected) {
+                    // Update text
+                    cloudBadgeLabel.setText("  ☁ Supabase: Connected  ");
+                    // Green text
+                    cloudBadgeLabel.setForeground(ModernTheme.COLOR_STATUS_OPEN);
+                    // Light green background
+                    cloudBadgeLabel.setBackground(ModernTheme.COLOR_STATUS_OPEN_BG);
+                // If offline or local mode
+                } else {
+                    // Update text
+                    cloudBadgeLabel.setText("  ☁ Local In-Memory Mode  ");
+                    // Slate text
+                    cloudBadgeLabel.setForeground(ModernTheme.COLOR_TEXT_MUTED);
+                    // Light grey background
+                    cloudBadgeLabel.setBackground(ModernTheme.COLOR_BG_INPUT);
+                // End if
+                }
+            // End lambda
+            });
+        // End thenAccept
+        });
     // End of method
     }
 // End of class

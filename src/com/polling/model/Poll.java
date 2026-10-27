@@ -1,13 +1,15 @@
 // Package declaration for domain model entities
 package com.polling.model;
 
+// Import SecurityUtil for cryptographic SHA-256 voter hashing
+import com.polling.security.SecurityUtil;
 // Import ArrayList for ordered option sequence
 import java.util.ArrayList;
 // Import Collections utility class for defensive unmodifiable wrappers
 import java.util.Collections;
 // Import HashMap for storing vote tallies per option (demonstrating HashMap usage)
 import java.util.HashMap;
-// Import HashSet for tracking unique voter IDs (demonstrating HashSet usage)
+// Import HashSet for tracking unique cryptographic voter hashes (demonstrating HashSet usage)
 import java.util.HashSet;
 // Import List interface
 import java.util.List;
@@ -18,7 +20,7 @@ import java.util.Set;
 // Import Date for timestamping creation time
 import java.util.Date;
 
-// Represents an individual poll containing questions, options, and live tallies
+// Represents an individual poll containing questions, options, live tallies, and hashed voter audit sets
 public class Poll {
 
     // Private field storing the unique identifier of the poll (Encapsulation)
@@ -33,8 +35,11 @@ public class Poll {
     // Private HashMap mapping each option text to its accumulated vote count
     private final Map<String, Integer> voteCounts;
 
-    // Private HashSet maintaining the unique IDs of voters who already voted
-    private final Set<String> votedVoterIds;
+    // Private HashSet maintaining the unique SHA-256 hashes of voters to enforce single-vote integrity
+    private final Set<String> votedVoterHashes;
+
+    // Private HashMap storing issued ballot receipts indexed by receipt verification code
+    private final Map<String, VoteReceipt> issuedReceipts;
 
     // Private boolean flag indicating whether the poll is actively accepting votes
     private boolean open;
@@ -52,8 +57,10 @@ public class Poll {
         this.options = new ArrayList<>();
         // Initialize the HashMap for vote counts
         this.voteCounts = new HashMap<>();
-        // Initialize the HashSet for voter tracking
-        this.votedVoterIds = new HashSet<>();
+        // Initialize the HashSet for cryptographic voter hash tracking
+        this.votedVoterHashes = new HashSet<>();
+        // Initialize the HashMap for issued receipts
+        this.issuedReceipts = new HashMap<>();
         // Set the initial status to open
         this.open = true;
         // Record the current system date and time
@@ -151,63 +158,85 @@ public class Poll {
     // End of method
     }
 
-    // Checks whether a given voter ID has already cast a ballot in this poll
+    // Checks whether a given voter ID has already cast a ballot using SHA-256 hashing
     public boolean hasVoted(String voterId) {
         // Synchronize access to the voter tracking HashSet
-        synchronized (this.votedVoterIds) {
-            // Check if voter ID is non-null and present in HashSet
-            if (voterId == null) {
-                // Null voter ID cannot be confirmed as voted
+        synchronized (this.votedVoterHashes) {
+            // Check if voter ID is non-null
+            if (voterId == null || voterId.trim().isEmpty()) {
+                // Null or empty voter ID cannot be confirmed as voted
                 return false;
             // End if
             }
+            // Compute salted SHA-256 hash of voter ID
+            String voterHash = SecurityUtil.hashVoterId(voterId, this.pollId);
             // Perform fast O(1) containment lookup using HashSet
-            return this.votedVoterIds.contains(voterId.trim().toUpperCase());
+            return this.votedVoterHashes.contains(voterHash);
         // End of synchronized block
         }
     // End of method
     }
 
-    // Records a vote for the specified option and logs the voter ID in the HashSet
-    public boolean recordVote(String voterId, String option) {
-        // Clean voter ID and format to uppercase for case-insensitive uniqueness
-        String cleanVoterId = (voterId != null) ? voterId.trim().toUpperCase() : "";
+    // Records a vote and generates a verifiable VoteReceipt
+    public synchronized VoteReceipt recordVoteWithReceipt(String voterId, String option) {
         // Clean option text
         String cleanOption = (option != null) ? option.trim() : "";
         // Check if poll is closed
         if (!this.open) {
             // Reject vote recording if poll is inactive
-            return false;
+            return null;
         // End if
         }
-        // Verify voter ID is non-empty
-        if (cleanVoterId.isEmpty()) {
+        // Verify voter ID presence
+        if (voterId == null || voterId.trim().isEmpty()) {
             // Reject vote recording for missing voter ID
-            return false;
+            return null;
         // End if
         }
         // Verify option exists in this poll
         if (!this.options.contains(cleanOption)) {
             // Reject vote recording for unlisted option
-            return false;
+            return null;
         // End if
         }
-        // Synchronize on the poll instance to ensure atomic ballot processing
-        synchronized (this) {
-            // Re-check duplicate status inside synchronized critical section
-            if (this.votedVoterIds.contains(cleanVoterId)) {
-                // Duplicate vote detected, operation rejected
-                return false;
-            // End if
-            }
-            // Add voter ID to the HashSet (returns true if successfully added)
-            this.votedVoterIds.add(cleanVoterId);
-            // Retrieve existing count for selected option
-            int currentCount = this.voteCounts.getOrDefault(cleanOption, 0);
-            // Increment vote count and store back into HashMap
-            this.voteCounts.put(cleanOption, currentCount + 1);
-            // Vote successfully registered
-            return true;
+        // Compute cryptographic SHA-256 hash for voter ID with poll salt
+        String voterHash = SecurityUtil.hashVoterId(voterId, this.pollId);
+        // Check duplicate status in HashSet
+        if (this.votedVoterHashes.contains(voterHash)) {
+            // Duplicate detected, reject vote
+            return null;
+        // End if
+        }
+        // Add voter hash to the HashSet
+        this.votedVoterHashes.add(voterHash);
+        // Retrieve existing count for selected option
+        int currentCount = this.voteCounts.getOrDefault(cleanOption, 0);
+        // Increment vote count and store back into HashMap
+        this.voteCounts.put(cleanOption, currentCount + 1);
+        // Generate cryptographic receipt code
+        String receiptCode = SecurityUtil.generateReceiptCode(this.pollId, voterHash, cleanOption);
+        // Construct VoteReceipt object
+        VoteReceipt receipt = new VoteReceipt(receiptCode, this.pollId, voterHash, cleanOption);
+        // Store receipt in HashMap
+        this.issuedReceipts.put(receiptCode, receipt);
+        // Return generated receipt
+        return receipt;
+    // End of method
+    }
+
+    // Standard recordVote delegate returning boolean for backwards compatibility
+    public boolean recordVote(String voterId, String option) {
+        // Delegate to recordVoteWithReceipt and check non-null
+        return recordVoteWithReceipt(voterId, option) != null;
+    // End of method
+    }
+
+    // Verifies whether a given receipt code corresponds to a valid ballot in this poll
+    public VoteReceipt verifyReceipt(String receiptCode) {
+        // Synchronize access to receipts map
+        synchronized (this.issuedReceipts) {
+            // Return receipt if present
+            return (receiptCode != null) ? this.issuedReceipts.get(receiptCode.trim().toUpperCase()) : null;
         // End of synchronized block
         }
     // End of method
@@ -236,21 +265,39 @@ public class Poll {
 
     // Returns the total number of unique voters who participated
     public int getVoterCount() {
-        // Synchronize access to voter ID HashSet
-        synchronized (this.votedVoterIds) {
+        // Synchronize access to voter hash HashSet
+        synchronized (this.votedVoterHashes) {
             // Return number of elements stored in the HashSet
-            return this.votedVoterIds.size();
+            return this.votedVoterHashes.size();
         // End of synchronized block
         }
     // End of method
     }
 
-    // Returns an unmodifiable view of all voter IDs who voted (for auditing)
-    public Set<String> getVotedVoterIds() {
-        // Synchronize access to voter ID HashSet
-        synchronized (this.votedVoterIds) {
+    // Returns an unmodifiable view of all SHA-256 voter hashes (for auditing)
+    public Set<String> getVotedVoterHashes() {
+        // Synchronize access to voter hash HashSet
+        synchronized (this.votedVoterHashes) {
             // Return defensive unmodifiable copy of the HashSet
-            return Collections.unmodifiableSet(new HashSet<>(this.votedVoterIds));
+            return Collections.unmodifiableSet(new HashSet<>(this.votedVoterHashes));
+        // End of synchronized block
+        }
+    // End of method
+    }
+
+    // Backwards-compatible alias returning the voter hashes set
+    public Set<String> getVotedVoterIds() {
+        // Delegate to getVotedVoterHashes
+        return getVotedVoterHashes();
+    // End of method
+    }
+
+    // Returns an unmodifiable map of issued vote receipts
+    public Map<String, VoteReceipt> getIssuedReceipts() {
+        // Synchronize access to receipts map
+        synchronized (this.issuedReceipts) {
+            // Return defensive copy
+            return Collections.unmodifiableMap(new HashMap<>(this.issuedReceipts));
         // End of synchronized block
         }
     // End of method

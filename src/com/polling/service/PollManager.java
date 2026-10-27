@@ -1,6 +1,14 @@
 // Package declaration for service layer components
 package com.polling.service;
 
+// Import SupabaseClient for cloud database integration
+import com.polling.database.SupabaseClient;
+// Import PollEvent for Observer pattern
+import com.polling.event.PollEvent;
+// Import PollEventListener interface
+import com.polling.event.PollEventListener;
+// Import PollEventType enum
+import com.polling.event.PollEventType;
 // Import custom domain exceptions
 import com.polling.exception.PollNotFoundException;
 // Import validation exception
@@ -19,10 +27,12 @@ import java.util.HashMap;
 import java.util.List;
 // Import Map interface
 import java.util.Map;
+// Import CopyOnWriteArrayList for thread-safe event listener dispatch
+import java.util.concurrent.CopyOnWriteArrayList;
 // Import AtomicInteger for generating consecutive poll numbers
 import java.util.concurrent.atomic.AtomicInteger;
 
-// Manages the lifecycle, storage, and catalog of polls using an in-memory HashMap
+// Manages the lifecycle, storage, and catalog of polls while serving as the Subject in the Observer Pattern
 public class PollManager {
 
     // Internal HashMap mapping poll ID strings to Poll objects
@@ -31,15 +41,70 @@ public class PollManager {
     // Sequence generator for generating incremental poll identifiers
     private final AtomicInteger idCounter;
 
+    // Thread-safe collection of registered observers (Observer Pattern)
+    private final List<PollEventListener> eventListeners;
+
+    // Supabase cloud client for remote PostgreSQL database synchronization
+    private final SupabaseClient supabaseClient;
+
     // Default constructor initializing in-memory collections and initial sample data
     public PollManager() {
         // Instantiate HashMap for fast poll lookup by ID
         this.pollCatalog = new HashMap<>();
         // Initialize counter starting at 101 for realistic poll identifiers
         this.idCounter = new AtomicInteger(101);
+        // Initialize observer listeners list
+        this.eventListeners = new CopyOnWriteArrayList<>();
+        // Initialize Supabase PostgreSQL cloud client
+        this.supabaseClient = new SupabaseClient();
         // Pre-populate realistic sample polls for immediate demonstration
         seedSamplePolls();
     // End of constructor
+    }
+
+    // Registers a listener for poll lifecycle notifications (Observer Pattern)
+    public void addEventListener(PollEventListener listener) {
+        // Validate listener presence
+        if (listener != null && !this.eventListeners.contains(listener)) {
+            // Add listener to collection
+            this.eventListeners.add(listener);
+        // End if
+        }
+    // End of method
+    }
+
+    // Unregisters a previously added listener (Observer Pattern)
+    public void removeEventListener(PollEventListener listener) {
+        // Remove listener
+        if (listener != null) {
+            // Remove from list
+            this.eventListeners.remove(listener);
+        // End if
+        }
+    // End of method
+    }
+
+    // Dispatches a poll event to all registered observers (Observer Pattern)
+    public void notifyEvent(PollEvent event) {
+        // Guard against null event
+        if (event != null) {
+            // Iterate over all active listeners
+            for (PollEventListener listener : this.eventListeners) {
+                // Try-catch block protecting dispatch loop from individual listener errors
+                try {
+                    // Invoke observer callback
+                    listener.onPollEvent(event);
+                // Catch any listener exception safely
+                } catch (Exception ex) {
+                    // Print dispatch warning
+                    System.err.println("Warning: Listener failed during event dispatch: " + ex.getMessage());
+                // End try-catch
+                }
+            // End for
+            }
+        // End if
+        }
+    // End of method
     }
 
     // Creates a new poll after validating question and options count
@@ -86,6 +151,12 @@ public class PollManager {
         Poll newPoll = new Poll(pollId, question.trim(), cleanOptions);
         // Store poll into the HashMap catalog
         this.pollCatalog.put(pollId, newPoll);
+        // Asynchronously sync new poll and options to Supabase PostgreSQL database
+        this.supabaseClient.syncPollAsync(newPoll);
+        // Asynchronously log audit event to Supabase
+        this.supabaseClient.logAuditEventAsync("POLL_CREATED", pollId, "Poll created: \"" + newPoll.getQuestion() + "\"");
+        // Notify observers that a new poll was published
+        notifyEvent(new PollEvent(PollEventType.POLL_CREATED, pollId, "Poll #" + pollId + " created: \"" + newPoll.getQuestion() + "\""));
         // Return the created poll
         return newPoll;
     // End of method
@@ -133,6 +204,10 @@ public class PollManager {
         Poll poll = getPoll(pollId);
         // Call closePoll on target entity
         poll.closePoll();
+        // Log close event to Supabase
+        this.supabaseClient.logAuditEventAsync("POLL_CLOSED", pollId, "Poll closed by admin " + user.getName());
+        // Dispatch observer notification
+        notifyEvent(new PollEvent(PollEventType.POLL_CLOSED, pollId, "Poll #" + pollId + " closed by admin " + user.getName()));
     // End of method
     }
 
@@ -148,6 +223,17 @@ public class PollManager {
         Poll poll = getPoll(pollId);
         // Call openPoll on target entity
         poll.openPoll();
+        // Log reopen event to Supabase
+        this.supabaseClient.logAuditEventAsync("POLL_REOPENED", pollId, "Poll reopened by admin " + user.getName());
+        // Dispatch observer notification
+        notifyEvent(new PollEvent(PollEventType.POLL_REOPENED, pollId, "Poll #" + pollId + " reopened by admin " + user.getName()));
+    // End of method
+    }
+
+    // Public getter for accessing the Supabase client
+    public SupabaseClient getSupabaseClient() {
+        // Return Supabase client instance
+        return this.supabaseClient;
     // End of method
     }
 

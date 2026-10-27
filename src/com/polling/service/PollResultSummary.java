@@ -35,7 +35,16 @@ public class PollResultSummary {
     // Private field indicating if there is a tie among leaders
     private final boolean tie;
 
-    // Parameterized constructor initializing all computed result metrics
+    // Private field indicating if a runoff is required under majority rules
+    private final boolean requiresRunoff;
+
+    // Private field storing the electoral strategy name used
+    private final String strategyName;
+
+    // Private field storing a custom verdict explanation
+    private final String customVerdict;
+
+    // Backwards-compatible constructor defaulting to Plurality evaluation
     public PollResultSummary(String pollId,
                              String question,
                              boolean open,
@@ -44,6 +53,23 @@ public class PollResultSummary {
                              Map<String, Double> optionPercentages,
                              List<String> winningOptions,
                              boolean tie) {
+        // Delegate to comprehensive constructor with default plurality strategy
+        this(pollId, question, open, totalVotes, optionCounts, optionPercentages, winningOptions, tie, false, "Plurality", null);
+    // End of constructor
+    }
+
+    // Comprehensive constructor initializing all computed result metrics and strategy parameters
+    public PollResultSummary(String pollId,
+                             String question,
+                             boolean open,
+                             int totalVotes,
+                             Map<String, Integer> optionCounts,
+                             Map<String, Double> optionPercentages,
+                             List<String> winningOptions,
+                             boolean tie,
+                             boolean requiresRunoff,
+                             String strategyName,
+                             String customVerdict) {
         // Assign the poll ID
         this.pollId = pollId;
         // Assign the question text
@@ -60,6 +86,12 @@ public class PollResultSummary {
         this.winningOptions = (winningOptions != null) ? Collections.unmodifiableList(winningOptions) : Collections.emptyList();
         // Assign the tie status flag
         this.tie = tie;
+        // Assign runoff flag
+        this.requiresRunoff = requiresRunoff;
+        // Assign strategy name
+        this.strategyName = (strategyName != null) ? strategyName : "Plurality";
+        // Assign custom verdict
+        this.customVerdict = customVerdict;
     // End of constructor
     }
 
@@ -119,6 +151,20 @@ public class PollResultSummary {
     // End of method
     }
 
+    // Getter for runoff requirement flag
+    public boolean isRequiresRunoff() {
+        // Return runoff flag
+        return this.requiresRunoff;
+    // End of method
+    }
+
+    // Getter for strategy name
+    public String getStrategyName() {
+        // Return strategy name
+        return this.strategyName;
+    // End of method
+    }
+
     // Helper method indicating if any votes have been cast
     public boolean hasVotes() {
         // Return true if total votes is strictly greater than zero
@@ -128,6 +174,12 @@ public class PollResultSummary {
 
     // Generates a human-readable text summary of the winning status
     public String getWinnerDescription() {
+        // Check if custom verdict is supplied by Strategy
+        if (customVerdict != null && !customVerdict.isEmpty()) {
+            // Return custom strategy verdict
+            return this.customVerdict;
+        // End if
+        }
         // Check if no votes have been cast yet
         if (totalVotes == 0) {
             // Return status indicating no votes

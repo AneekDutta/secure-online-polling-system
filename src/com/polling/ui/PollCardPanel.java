@@ -9,6 +9,8 @@ import com.polling.exception.PollClosedException;
 import com.polling.exception.PollNotFoundException;
 // Import validation exception
 import com.polling.exception.ValidationException;
+// Import VoteReceipt model
+import com.polling.model.VoteReceipt;
 // Import domain models
 import com.polling.model.Poll;
 // Import User model
@@ -85,6 +87,9 @@ public class PollCardPanel extends JPanel {
 
     // Text field for voter ID entry
     private final JTextField voterIdField;
+
+    // Vote submission button
+    private JButton voteButton;
 
     // Status / feedback label for inline messages
     private final JLabel feedbackLabel;
@@ -267,13 +272,13 @@ public class PollCardPanel extends JPanel {
         actionRow.add(voterIdField);
 
         // Create vote button
-        JButton voteButton = new JButton("Submit Vote");
+        this.voteButton = new JButton("Submit Vote");
         // Style as primary button
-        ModernTheme.stylePrimaryButton(voteButton);
+        ModernTheme.stylePrimaryButton(this.voteButton);
         // Disable button if poll is closed
-        voteButton.setEnabled(poll.isOpen());
+        this.voteButton.setEnabled(poll.isOpen());
         // Attach click listener for voting
-        voteButton.addActionListener(new ActionListener() {
+        this.voteButton.addActionListener(new ActionListener() {
             // Invoked when vote button is clicked
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -284,7 +289,7 @@ public class PollCardPanel extends JPanel {
         // End of listener
         });
         // Add to action row
-        actionRow.add(voteButton);
+        actionRow.add(this.voteButton);
 
         // Create View Results button
         JButton viewResultsButton = new JButton("View Results (" + poll.getTotalVotes() + ")");
@@ -362,10 +367,22 @@ public class PollCardPanel extends JPanel {
 
         // Try casting vote through VotingService
         try {
-            // Submit vote to business service layer
-            votingService.castVote(poll.getPollId(), voterId, selectedOption);
-            // Display success feedback message
-            showFeedback("Vote successfully recorded! Thank you for participating.", ModernTheme.COLOR_STATUS_OPEN);
+            // Submit vote to business service layer and receive cryptographic VoteReceipt
+            VoteReceipt receipt = votingService.castVoteWithReceipt(poll.getPollId(), voterId, selectedOption);
+            // Display success feedback message with issued receipt code
+            showFeedback("Vote recorded! Receipt Code: " + receipt.getReceiptCode(), ModernTheme.COLOR_STATUS_OPEN);
+            // Show verification dialog with full cryptographic receipt
+            JOptionPane.showMessageDialog(
+                this,
+                "Your ballot has been securely registered!\n\n" +
+                "Poll Identifier : #" + poll.getPollId() + "\n" +
+                "Option Choice   : " + receipt.getSelectedOption() + "\n" +
+                "Receipt Code    : " + receipt.getReceiptCode() + "\n" +
+                "Voter Hash (Salt): " + receipt.getVoterHash().substring(0, 16) + "...\n\n" +
+                "Keep this receipt code to audit or verify your ballot at any time.",
+                "Ballot Receipt Issued",
+                JOptionPane.INFORMATION_MESSAGE
+            );
             // Clear input field
             voterIdField.setText("");
             // Clear radio button selection
@@ -456,6 +473,34 @@ public class PollCardPanel extends JPanel {
         // Set foreground color
         feedbackLabel.setForeground(color);
     // End of method
+    }
+
+    // Returns voter ID input field for human simulation
+    public JTextField getVoterIdField() {
+        // Return voter ID field
+        return this.voterIdField;
+    // End method
+    }
+
+    // Returns option button group for human simulation
+    public ButtonGroup getOptionButtonGroup() {
+        // Return button group
+        return this.optionButtonGroup;
+    // End method
+    }
+
+    // Returns vote button for human simulation
+    public JButton getVoteButton() {
+        // Return vote button
+        return this.voteButton;
+    // End method
+    }
+
+    // Returns poll instance for human simulation
+    public Poll getPoll() {
+        // Return poll
+        return this.poll;
+    // End method
     }
 // End of class
 }

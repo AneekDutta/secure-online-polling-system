@@ -1,5 +1,5 @@
 # Secure Online Polling & Result Analysis System
-> **College Object-Oriented Programming (OOP) Project**  
+> **College Object-Oriented Programming (OOP) Project — Iteration 2**  
 > Developed using pure Java (Standard Edition) and Java Swing.
 
 ---
@@ -8,8 +8,10 @@
 
 The **Secure Online Polling & Result Analysis System** is a lightweight, responsive desktop application developed for a college Object-Oriented Programming project. It provides an intuitive platform to create polls, cast secure votes, prevent duplicate ballots per poll, and analyze live electoral distributions with horizontal graphical bars and tie detection.
 
+In **Iteration 2**, the system incorporates advanced software engineering design patterns (**Observer Pattern** and **Strategy Pattern**), cryptographic ballot protection (**Salted SHA-256 Voter Hashing** and **Ballot Receipts**), and certified **CSV and Text Report Exporting**.
+
 > [!NOTE]
-> **In-Memory Storage Notice**: This application operates in-memory using standard Java collections (`HashMap` and `HashSet`). All polls, votes, and timestamps reset when the application restarts. This design avoids external database/network dependencies while keeping data structures clean, transparent, and easy to explain during academic evaluation.
+> **Hybrid In-Memory + Supabase Cloud Architecture**: This application operates in a robust hybrid model. It utilizes high-speed in-memory collections (`HashMap` and `HashSet`) for instantaneous UI operations and local resilience, while asynchronously synchronizing state with a live **Supabase PostgreSQL** cloud database (`https://ykxcoihvfzgykrkabbdy.supabase.co`). If internet access is unavailable, the application gracefully continues operating in local in-memory mode without interruption.
 
 ---
 
@@ -17,18 +19,21 @@ The **Secure Online Polling & Result Analysis System** is a lightweight, respons
 
 1. **Poll Creation**: Create polls with a customized question and at least two distinct options (dynamic option adder and remover).
 2. **Catalog Browsing & Search**: View available polls in clean modern cards, filter by "All", "Open", or "Closed", and search questions or poll IDs in real time.
-3. **Ballot Submission & Validation**: Voters enter a unique Voter ID and select an option. Empty inputs, malformed IDs, unlisted choices, and duplicate attempts are strictly rejected.
-4. **Duplicate Vote Prevention (HashSet)**: Enforces unique voting per poll via `HashSet<String>` at the service layer, preventing double voting even if UI safeguards are bypassed.
-5. **Vote Counts & Percentages**: Computes exact vote tallies and rounded percentage distributions for every candidate option.
-6. **Tie & Winner Analysis**: Automatically identifies the leading option or announces a tie when two or more choices share the highest vote count.
-7. **Administrative Poll Lifecycle**: Authorized administrators can close polls to lock out subsequent votes, or reopen them when needed.
-8. **HashSet Voter Audit**: Administrators can inspect the internal `HashSet` of unique voter IDs recorded for any poll, directly demonstrating collection integrity to examiners.
+3. **Ballot Submission & Cryptographic Receipt**: Voters submit their ID and option. Upon submission, the voter receives a unique cryptographic receipt code (e.g., `RCPT-7A9F...`) to verify their ballot.
+4. **Salted SHA-256 Voter ID Hashing (HashSet)**: Plain-text voter IDs are never stored. The system computes a poll-salted SHA-256 hash and stores it in a `HashSet<String>`, preserving voter anonymity while enforcing $O(1)$ duplicate prevention.
+5. **Real-time Observer Pattern (Event-Driven UI)**: When a vote is cast or a poll is created/closed, all open panels (`PollListPanel`, `ResultsPanel`, `AdminPanel`) update automatically in real time without manual refresh clicks.
+6. **Pluggable Electoral Strategy Pattern**: Switch between electoral models on the fly in the Results tab:
+   - **Plurality (First-Past-The-Post)**: Standard highest-vote winner, with tie detection.
+   - **Majority Threshold (>50% Required)**: Requires strictly greater than 50% to declare an outright winner; otherwise flags "Runoff Required among leaders".
+7. **CSV & Certified Text Report Exports**: Export election results as RFC-4180 compliant `.csv` spreadsheets or certified `.txt` audit reports containing SHA-256 cryptographic trails.
+8. **Receipt Verification & Audit**: Administrators can enter any receipt code to verify its legitimacy or inspect the raw SHA-256 voter hash set.
 9. **Polymorphic Persona Switcher**: Seamlessly toggle between "Administrator" and "Standard Voter" sessions in the UI to demonstrate runtime polymorphism and access control.
-10. **Pre-Seeded Sample Polls**: The application comes pre-loaded with three realistic college polls (including a 50/50 tie demonstration) for immediate evaluation without setup delay.
+10. **Pre-Seeded Sample Polls**: The application comes pre-loaded with realistic college polls (including a 50/50 tie demonstration) for immediate evaluation without setup delay.
+11. **Supabase Cloud PostgreSQL Integration**: Seamlessly syncs polls, candidate options, voter hashes, ballot receipts, and audit trail events with a live Supabase PostgreSQL database (`https://ykxcoihvfzgykrkabbdy.supabase.co`) via zero-dependency asynchronous standard Java HTTP client.
 
 ---
 
-## 3. Mandatory OOP Concepts Demonstrated
+## 3. Mandatory & Advanced OOP Concepts Demonstrated
 
 | OOP Concept | Project Implementation | Key Classes / Methods |
 | :--- | :--- | :--- |
@@ -36,9 +41,11 @@ The **Secure Online Polling & Result Analysis System** is a lightweight, respons
 | **Abstraction** | Defined abstract base class `User` encapsulating common user identity while declaring abstract contracts (`getRole()`, `getPermissionsDescription()`, `canManagePolls()`) that concrete subtypes must fulfill. | [`User.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/model/User.java) |
 | **Inheritance** | `Admin` and `Voter` extend `User`, inheriting core identification logic while introducing specialized attributes (e.g., administrator department) and behaviors. | [`Admin.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/model/Admin.java), [`Voter.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/model/Voter.java) |
 | **Polymorphism** | Overridden methods exhibit distinct runtime behavior. Dynamic dispatch allows UI components to display role titles, descriptive permissions, and gate administrative actions dynamically based on the polymorphic reference `User`. | `user.getRole()`, `user.canManagePolls()` |
+| **Observer Pattern** *(Iteration 2)* | `PollManager` acts as the Subject maintaining a thread-safe list of `PollEventListener` observers. When state changes (`VOTE_CAST`, `POLL_CREATED`, `POLL_CLOSED`, `POLL_REOPENED`), events are broadcast and UI panels auto-refresh on the Swing Event Dispatch Thread. | [`PollEventListener.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/event/PollEventListener.java), [`PollEvent.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/event/PollEvent.java), [`PollManager.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/service/PollManager.java) |
+| **Strategy Pattern** *(Iteration 2)* | `WinningStrategy` interface allows pluggable electoral calculation algorithms (`PluralityWinningStrategy` vs. `MajorityWinningStrategy`). `ResultAnalyzer` evaluates outcomes based on the selected strategy. | [`WinningStrategy.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/strategy/WinningStrategy.java), [`PluralityWinningStrategy.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/strategy/PluralityWinningStrategy.java), [`MajorityWinningStrategy.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/strategy/MajorityWinningStrategy.java) |
 | **Exception Handling** | Domain-specific checked exceptions handle error states gracefully with clean user feedback, instead of generic crashes. | [`DuplicateVoteException`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/exception/DuplicateVoteException.java), [`PollClosedException`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/exception/PollClosedException.java), [`InvalidVoteException`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/exception/InvalidVoteException.java), [`PollNotFoundException`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/exception/PollNotFoundException.java), [`ValidationException`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/exception/ValidationException.java) |
-| **`HashMap` Collection** | 1. `pollCatalog` (`HashMap<String, Poll>`) stores polls indexed by unique poll ID for $O(1)$ retrieval.<br>2. `voteCounts` (`HashMap<String, Integer>`) stores real-time ballot tallies per candidate option. | [`PollManager.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/service/PollManager.java), [`Poll.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/model/Poll.java) |
-| **`HashSet` Collection** | `votedVoterIds` (`HashSet<String>`) maintains the set of voters who have cast ballots in a given poll. Enables instant $O(1)$ duplicate checking and enforces single-vote integrity. | [`Poll.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/model/Poll.java), [`VotingService.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/service/VotingService.java) |
+| **`HashMap` Collection** | 1. `pollCatalog` (`HashMap<String, Poll>`) stores polls indexed by ID for $O(1)$ retrieval.<br>2. `voteCounts` (`HashMap<String, Integer>`) stores tallies per candidate option.<br>3. `issuedReceipts` (`HashMap<String, VoteReceipt>`) stores cryptographic ballot receipts for instant lookup. | [`PollManager.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/service/PollManager.java), [`Poll.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/model/Poll.java) |
+| **`HashSet` Collection** | `votedVoterHashes` (`HashSet<String>`) stores SHA-256 salted hashes of voter IDs. Guarantees anonymity while enforcing strict single-vote prevention with $O(1)$ containment lookups. | [`Poll.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/model/Poll.java), [`SecurityUtil.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/src/com/polling/security/SecurityUtil.java) |
 
 ---
 
@@ -54,7 +61,22 @@ oop-gauri&aneek/
 │           │   ├── User.java                      # Abstract base user (Abstraction & Encapsulation)
 │           │   ├── Admin.java                     # Admin user (Inheritance & Polymorphism)
 │           │   ├── Voter.java                     # Voter user (Inheritance & Polymorphism)
-│           │   └── Poll.java                      # Poll entity (HashMap & HashSet encapsulation)
+│           │   ├── Poll.java                      # Poll entity (HashMap & HashSet encapsulation)
+│           │   └── VoteReceipt.java               # Cryptographic ballot receipt model
+│           ├── security/
+│           │   └── SecurityUtil.java              # SHA-256 salted voter hashing & receipt generator
+│           ├── database/
+│           │   ├── SupabaseConfig.java            # Supabase PostgreSQL REST credentials & endpoints
+│           │   └── SupabaseClient.java            # Asynchronous pure-Java HTTP cloud persistence client
+│           ├── event/
+│           │   ├── PollEventType.java             # Lifecycle event types (VOTE_CAST, POLL_CREATED, etc.)
+│           │   ├── PollEvent.java                 # Event payload dispatched to observers
+│           │   └── PollEventListener.java         # Observer interface for real-time updates
+│           ├── strategy/
+│           │   ├── WinningStrategy.java           # Strategy interface for electoral models
+│           │   ├── PluralityWinningStrategy.java  # First-past-the-post strategy
+│           │   ├── MajorityWinningStrategy.java   # >50% threshold runoff strategy
+│           │   └── StrategyEvaluationResult.java  # Strategy verdict DTO
 │           ├── exception/
 │           │   ├── PollingException.java          # Base custom exception
 │           │   ├── DuplicateVoteException.java    # Thrown when voter attempts double voting
@@ -63,23 +85,24 @@ oop-gauri&aneek/
 │           │   ├── PollNotFoundException.java     # Thrown when poll ID is missing
 │           │   └── ValidationException.java       # Thrown on blank input / <2 options
 │           ├── service/
-│           │   ├── PollManager.java               # Catalog manager using HashMap<String, Poll>
+│           │   ├── PollManager.java               # Catalog manager & Observer Subject
 │           │   ├── VotingService.java             # Core voting logic and security verification
-│           │   ├── ResultAnalyzer.java            # Analytics, percentages, and tie identification
+│           │   ├── ResultAnalyzer.java            # Analytics & Strategy-aware evaluator
+│           │   ├── ReportExporter.java            # CSV and Certified Plain Text Report exporter
 │           │   └── PollResultSummary.java         # Immutable analytics DTO
 │           └── ui/
 │               ├── ModernTheme.java               # Color palette, typography, and button styling
 │               ├── MainFrame.java                 # Main window, navigation tabs, status banners
 │               ├── PollCardPanel.java             # Individual poll card with voting actions
-│               ├── PollListPanel.java             # Poll list with search & status filters
+│               ├── PollListPanel.java             # Poll list with search & status filters (Observer)
 │               ├── CreatePollPanel.java           # Dynamic form to author new polls
-│               ├── ResultsPanel.java              # Analytics breakdown & horizontal percentage bars
-│               └── AdminPanel.java                # Persona switcher & HashSet voter audit
+│               ├── ResultsPanel.java              # Analytics, Strategy selector, CSV/Text export (Observer)
+│               └── AdminPanel.java                # Persona switcher, receipt verifier, audit (Observer)
 ├── test/
 │   └── com/
 │       └── polling/
 │           └── test/
-│               └── VotingSystemTest.java          # Standalone automated verification test suite
+│               └── VotingSystemTest.java          # Standalone automated verification test suite (10/10 tests)
 └── README.md
 ```
 
@@ -97,7 +120,7 @@ The graphical user interface follows modern, minimal desktop design principles:
   - Status Indicators: Emerald Green (`#10B981`) for Open polls and Crimson Red (`#DC2626`) for Closed polls
 - **Typography**: Clean hierarchy with Sans-Serif fonts (20pt Headings, 15pt Subheadings, 13pt Body).
 - **Responsiveness**: Smooth scaling from standard laptop resolutions ($1080 \times 720$) down to compact screens ($920 \times 600$) using layout managers and customized `JScrollPane` containers.
-- **Feedback**: Color-coded inline banners for success and errors, and confirmation dialogs for destructive actions (e.g. closing a poll).
+- **Feedback**: Color-coded inline banners for success and errors, and confirmation dialogs for destructive actions.
 
 ---
 
@@ -135,7 +158,7 @@ The graphical user interface follows modern, minimal desktop design principles:
 
 ---
 
-## 7. Automated Test Suite
+## 7. Automated Test Suite (11 Comprehensive Tests)
 
 A standalone test runner ([`VotingSystemTest.java`](file:///Users/aneekdutta/Downloads/oop-gauri%26aneek/test/com/polling/test/VotingSystemTest.java)) is included to verify all functional requirements and OOP principles without third-party dependencies:
 
@@ -145,6 +168,11 @@ A standalone test runner ([`VotingSystemTest.java`](file:///Users/aneekdutta/Dow
 - **Test 4**: Closed Poll Rejection (asserts that voting on a closed poll throws `PollClosedException`).
 - **Test 5**: Input Validations (asserts validation exceptions on empty question, single option, and unlisted choices).
 - **Test 6**: Result Calculation & Tie Handling (verifies percentage precision, zero-vote states, and multi-candidate ties).
+- **Test 7**: Cryptographic SHA-256 Hashing & Ballot Receipts (verifies salted hashes and receipt verification).
+- **Test 8**: Observer Pattern Event Dispatching (verifies real-time event dispatching on poll actions).
+- **Test 9**: Strategy Pattern (asserts differences between Plurality and Majority Threshold runoff mandates).
+- **Test 10**: Report Exporter (verifies valid output for CSV spreadsheets and certified audit text reports).
+- **Test 11**: Supabase Cloud Database Integration (verifies live PostgreSQL connectivity, REST API, and remote audit logging).
 
 Run the tests anytime with:
 ```bash
@@ -156,5 +184,5 @@ java -cp bin com.polling.test.VotingSystemTest
 ## 8. Security & Correctness Disclaimers
 
 - **Educational Purpose**: This project is developed as a college demonstration of Object-Oriented Programming and Swing GUI engineering.
-- **Voter Identification**: In a production election system, a Voter ID alone is insufficient without cryptographic signatures or multi-factor authentication. In this educational model, voter IDs serve as unique keys to demonstrate `HashSet` duplicate rejection.
-- **Defense-in-Depth**: Duplicate vote checks and closed-status validations are enforced inside `VotingService` and `Poll`, guaranteeing that disabled UI buttons are not the sole line of defense.
+- **Anonymized Ballot Integrity**: Plain-text voter IDs are never permanently stored. Only a salted SHA-256 digest is maintained in the internal `HashSet`, ensuring single-vote enforcement without compromising ballot secrecy.
+- **Defense-in-Depth**: Duplicate vote checks, cryptographic hashing, and closed-status validations are enforced inside `VotingService` and `Poll`, guaranteeing that disabled UI buttons are not the sole line of defense.

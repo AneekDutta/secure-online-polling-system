@@ -16,9 +16,9 @@ public class Main {
         // Print welcome header in console
         System.out.println("======================================================================");
         // Print application title
-        System.out.println("  SECURE ONLINE POLLING & RESULT ANALYSIS SYSTEM (COLLEGE OOP PROJECT)");
+        System.out.println("  SECURE ONLINE POLLING & RESULT ANALYSIS SYSTEM - ITERATION 2");
         // Print author/course notice
-        System.out.println("  Built with Java Swing, HashMap, and HashSet");
+        System.out.println("  Built with Java Swing, HashMap, HashSet, SHA-256, Strategy & Observer Patterns");
         // Print in-memory notice
         System.out.println("  Notice: Running in In-Memory Mode (Data resets when app is closed)");
         // Print separator

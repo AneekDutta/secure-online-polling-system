@@ -63,6 +63,9 @@ public class CreatePollPanel extends JPanel {
     // Internal list keeping track of option text fields
     private final List<JTextField> optionFields;
 
+    // Create / Publish Poll button
+    private JButton createButton;
+
     // Status / feedback message label
     private final JLabel feedbackLabel;
 
@@ -215,13 +218,13 @@ public class CreatePollPanel extends JPanel {
         submitRow.setAlignmentX(LEFT_ALIGNMENT);
 
         // Create Poll button
-        JButton createButton = new JButton("Publish Poll");
+        this.createButton = new JButton("Publish Poll");
         // Style primary
-        ModernTheme.stylePrimaryButton(createButton);
+        ModernTheme.stylePrimaryButton(this.createButton);
         // Add action listener
-        createButton.addActionListener(e -> handleCreatePoll());
+        this.createButton.addActionListener(e -> handleCreatePoll());
         // Add to submit row
-        submitRow.add(createButton);
+        submitRow.add(this.createButton);
 
         // Reset form button
         JButton resetBtn = new JButton("Reset Form");
@@ -261,7 +264,7 @@ public class CreatePollPanel extends JPanel {
     }
 
     // Dynamically appends a new option row with text field and remove button
-    private void addOptionRow() {
+    public void addOptionRow() {
         // Row index
         int index = optionFields.size() + 1;
         // Row container panel
@@ -425,6 +428,27 @@ public class CreatePollPanel extends JPanel {
         // Repaint
         optionsListPanel.repaint();
     // End of method
+    }
+
+    // Returns question text field for human simulation
+    public JTextField getQuestionField() {
+        // Return question field
+        return this.questionField;
+    // End method
+    }
+
+    // Returns list of option fields for human simulation
+    public List<JTextField> getOptionFields() {
+        // Return option fields
+        return this.optionFields;
+    // End method
+    }
+
+    // Returns publish button for human simulation
+    public JButton getCreateButton() {
+        // Return button
+        return this.createButton;
+    // End method
     }
 // End of class
 }
