@@ -244,8 +244,23 @@ public class GuiHumanSimulationController {
         // Pause
         sleep(1400);
 
+        // Ensure active persona has Administrative authorization
+        com.polling.model.User activeUser = frame.getCurrentUser();
+        // Check if user lacks admin management permissions
+        if (!activeUser.canManagePolls()) {
+            // Instantiate polymorphic Admin user session
+            activeUser = new com.polling.model.Admin("ADMIN-101", "Gauri Admin", "Campus Election Commission");
+            // Final reference for lambda
+            final com.polling.model.User finalAdmin = activeUser;
+            // Update active session on Event Dispatch Thread
+            SwingUtilities.invokeLater(() -> frame.setCurrentUser(finalAdmin));
+            // Brief pause
+            sleep(400);
+        // End if
+        }
+
         // Admin closes poll #POLL-101
-        frame.getPollManager().closePoll("POLL-101", frame.getCurrentUser());
+        frame.getPollManager().closePoll("POLL-101", activeUser);
         // Refresh all views
         SwingUtilities.invokeLater(frame::refreshAllViews);
         // Pause
