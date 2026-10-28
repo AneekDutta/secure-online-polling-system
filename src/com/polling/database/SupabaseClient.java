@@ -73,8 +73,8 @@ public class SupabaseClient {
     public CompletableFuture<Boolean> logAuditEventAsync(String eventType, String pollId, String message) {
         // Build JSON body string
         String json = "{\"event_type\":\"" + escapeJson(eventType) + "\","
-                    + "\"poll_id\":\"" + escapeJson(pollId) + "\","
-                    + "\"message\":\"" + escapeJson(message) + "\"}";
+                    + "\"entity_id\":\"" + escapeJson(pollId) + "\","
+                    + "\"details\":\"" + escapeJson(message) + "\"}";
         // Dispatch asynchronous POST request
         return postJsonAsync(SupabaseConfig.ENDPOINT_AUDIT_EVENTS, json);
     // End of method
@@ -91,6 +91,7 @@ public class SupabaseClient {
         // Build JSON payload for poll record
         String pollJson = "{\"id\":\"" + escapeJson(poll.getPollId()) + "\","
                         + "\"question\":\"" + escapeJson(poll.getQuestion()) + "\","
+                        + "\"created_by\":\"ADMIN-101\","
                         + "\"is_open\":" + poll.isOpen() + "}";
 
         // Send poll insert first
@@ -145,7 +146,7 @@ public class SupabaseClient {
         String receiptJson = "{\"receipt_code\":\"" + escapeJson(receipt.getReceiptCode()) + "\","
                            + "\"poll_id\":\"" + escapeJson(pollId) + "\","
                            + "\"voter_hash\":\"" + escapeJson(voterHash) + "\","
-                           + "\"selected_option\":\"" + escapeJson(selectedOption) + "\"}";
+                           + "\"option_choice\":\"" + escapeJson(selectedOption) + "\"}";
 
         // Execute voter hash insert followed by receipt insert
         return postJsonAsync(SupabaseConfig.ENDPOINT_VOTER_HASHES, hashJson).thenCompose(hashOk -> {
