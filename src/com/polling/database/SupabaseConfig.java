@@ -10,10 +10,10 @@ public final class SupabaseConfig {
     }
 
     // Base URL of the Supabase project
-    public static final String SUPABASE_URL = "https://ykxcoihvfzgykrkabbdy.supabase.co";
+    public static final String SUPABASE_URL = "https://wglxdqbacftiqacxgttp.supabase.co";
 
     // Standard publishable API key for authenticating REST requests against Supabase PostgREST gateway
-    public static final String SUPABASE_ANON_KEY = "sb_publishable_9zGVF54qxH6SeLrAU1gpWw_aFN_lMhh";
+    public static final String SUPABASE_ANON_KEY = "sb_publishable_gwsgDVDjH9r2gK4xnCDxwA_laUpGxSD";
 
     // REST endpoint URL for querying and managing polls
     public static final String ENDPOINT_POLLS = SUPABASE_URL + "/rest/v1/polls";
